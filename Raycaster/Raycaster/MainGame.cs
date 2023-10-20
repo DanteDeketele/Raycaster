@@ -1,15 +1,19 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using Raycaster.Levels;
+using System.Diagnostics;
 
 namespace Raycaster
 {
-    public class Game1 : Game
+    public class MainGame : Game
     {
         private GraphicsDeviceManager _graphics;
         private SpriteBatch _spriteBatch;
 
-        public Game1()
+        private Level[] _levels;
+
+        public MainGame()
         {
             _graphics = new GraphicsDeviceManager(this);
             Content.RootDirectory = "Content";
@@ -27,6 +31,13 @@ namespace Raycaster
         {
             _spriteBatch = new SpriteBatch(GraphicsDevice);
 
+            LevelUnpacker levelUnpacker = new LevelUnpacker();
+            _levels = levelUnpacker.GetLevels();
+            foreach (Level level in _levels)
+            {
+                Debug.WriteLine(level);
+            }
+
             // TODO: use this.Content to load your game content here
         }
 
@@ -42,7 +53,7 @@ namespace Raycaster
 
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.CornflowerBlue);
+            GraphicsDevice.Clear(Color.Black);
 
             // TODO: Add your drawing code here
 

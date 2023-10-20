@@ -1,3 +1,2 @@
-﻿
-using var game = new Raycaster.Game1();
+﻿using var game = new Raycaster.MainGame();
 game.Run();
