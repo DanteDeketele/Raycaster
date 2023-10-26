@@ -11,20 +11,20 @@ namespace Raycaster
         public Level(string name, int[,] mapData)
         {
             Name = name;
-            _mapData = mapData;
+            MapData = mapData;
         }
 
 
         public string Name { get; set; }
 
 
-        private int[,] _mapData;
-        public int Width => _mapData.GetLength(0);
-        public int Height => _mapData.GetLength(1);
-        public int GetCellValue(int x, int y) => _mapData[x, y];
+        public int[,] MapData { get; private set; }
+        public int Width => MapData.GetLength(0);
+        public int Height => MapData.GetLength(1);
+        public int GetCellValue(int x, int y) => MapData[x, y];
         public void SetCellValue(int x, int y, int value)
         {
-            _mapData[x, y] = value;
+            MapData[x, y] = value;
         }
 
         public override string ToString()
@@ -38,7 +38,7 @@ namespace Raycaster
             {
                 for (int j = 0; j < Height; j++)
                 {
-                    text += _mapData[i, j];
+                    text += MapData[i, j];
                 }
                 text += "\n";
             }
