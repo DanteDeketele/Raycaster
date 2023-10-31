@@ -1,5 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using System;
+using System.Diagnostics;
 
 namespace Raycaster
 {
@@ -42,6 +44,13 @@ namespace Raycaster
 
                 dir -= Vector2.UnitX * (state.IsKeyDown(Keys.A) ? 1 : 0);
                 dir += Vector2.UnitX * (state.IsKeyDown(Keys.D) ? 1 : 0);
+
+                if (dir.Length() > 0)
+                {
+                    dir = Vector2.Normalize(dir) * MathF.Min(1, dir.Length());
+                }
+
+                Debug.WriteLine(dir.ToString());
 
                 return dir;
             }

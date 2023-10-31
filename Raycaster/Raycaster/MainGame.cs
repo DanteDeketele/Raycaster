@@ -1,8 +1,12 @@
 ﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using Raycaster.Levels;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 
 namespace Raycaster
 {
@@ -13,12 +17,25 @@ namespace Raycaster
 
         private Level[] _levels;
         private Camera _camera;
+        private Vector2 _prevPos;
 
         private InputHandeler _inputHandeler;
 
         private Texture2D _whiteTexture;
+        private Texture2D _textureSheet;
+        private Texture2D _glowTexture;
+
+        private Random _random = new Random();
+
+
+        private float _blinkFase = 0;
+
 
         private bool _enableTopView = false;
+
+        private Dictionary<string, SoundEffect> _soundEffects;
+
+        private Point _screenRes;
 
         public MainGame()
         {
@@ -27,15 +44,24 @@ namespace Raycaster
             Content.RootDirectory = "Content";
             IsMouseVisible = true;
 
-            _graphics.PreferredBackBufferWidth = 1920;
-            _graphics.PreferredBackBufferHeight = 1080;
+
+            // Set the preferred screen resolution
+            _graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
+            _graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
+
+            _screenRes = new Point(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
+
+            // Set the game to run in fullscreen mode
+            //_graphics.IsFullScreen = true;
+
+            // Apply the changes
+            _graphics.ApplyChanges();
         }
 
         protected override void Initialize()
         {
-            // TODO: Add your initialization logic here
-            int upscale = 6;
-            _camera = new Camera(_graphics.PreferredBackBufferWidth / upscale, _graphics.PreferredBackBufferHeight / upscale, upscale);
+            _camera = new Camera(320, 180, 12);
+            _prevPos = _camera.Position;
             _inputHandeler = new InputHandeler(new Point(_graphics.PreferredBackBufferWidth/2, _graphics.PreferredBackBufferHeight/2));
 
             IsMouseVisible = false;
@@ -57,6 +83,16 @@ namespace Raycaster
 
             _whiteTexture = new Texture2D(GraphicsDevice, 1, 1);
             _whiteTexture.SetData(new[] { Color.White });
+
+            FileStream fileStream = new FileStream("sheet.png", FileMode.Open);
+            _textureSheet = Texture2D.FromStream(GraphicsDevice, fileStream);
+            fileStream.Dispose();
+            FileStream fileStream1 = new FileStream("glow.png", FileMode.Open);
+            _glowTexture = Texture2D.FromStream(GraphicsDevice, fileStream1);
+            fileStream1.Dispose();
+
+            _soundEffects = AudioUnpacker.GetSounds("Sounds");
+            _soundEffects["music"].Play(0.1f, 0, 0);
         }
 
         protected override void UnloadContent()
@@ -81,11 +117,93 @@ namespace Raycaster
             if (Keyboard.GetState().IsKeyDown(Keys.I))
                 _enableTopView = false;
 
-            _camera.Position += _camera.Forward * InputHandeler.MoveDirection.Y * deltaTime;
-            _camera.Position += _camera.Right * InputHandeler.MoveDirection.X * deltaTime;
+
+            float radius = 0.3f;
+
+            int[,] map = _levels[0].MapData;
+
+            Vector2 moveDirForward = _camera.Forward * InputHandeler.MoveDirection.Y;
+            Vector2 moveDirRight = _camera.Right * InputHandeler.MoveDirection.X;
+
+            /*if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirForward.X > 0)
+                moveDirForward.X = 0;
+            if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirForward.X < 0)
+                moveDirForward.X = 0;
+            if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirForward.Y > 0)
+                moveDirForward.Y = 0;
+            if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirForward.Y < 0)
+                moveDirForward.Y = 0;
+            if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirRight.X > 0)
+                moveDirRight.X = 0;
+            if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirRight.X < 0)
+                moveDirRight.X = 0;
+            if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirRight.Y > 0)
+                moveDirRight.Y = 0;
+            if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirRight.Y < 0)
+                moveDirRight.Y = 0;
+
+            if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirForward.X > 0)
+                moveDirForward.X = 0;
+            if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirForward.X < 0)
+                moveDirForward.X = 0;
+            if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirForward.Y > 0)
+                moveDirForward.Y = 0;
+            if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirForward.Y < 0)
+                moveDirForward.Y = 0;
+            if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirRight.X > 0)
+                moveDirRight.X = 0;
+            if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirRight.X < 0)
+                moveDirRight.X = 0;
+            if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirRight.Y > 0)
+                moveDirRight.Y = 0;
+            if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirRight.Y < 0)
+                moveDirRight.Y = 0;*/
+
+            if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y)] != 0 && moveDirForward.X > 0)
+                moveDirForward.X = 0;
+            if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y)] != 0 && moveDirForward.X < 0)
+                moveDirForward.X = 0;
+            if (map[(int)(_camera.Position.X), (int)(_camera.Position.Y + radius)] != 0 && moveDirForward.Y > 0)
+                moveDirForward.Y = 0;
+            if (map[(int)(_camera.Position.X), (int)(_camera.Position.Y - radius)] != 0 && moveDirForward.Y < 0)
+                moveDirForward.Y = 0;
+            if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y)] != 0 && moveDirRight.X > 0)
+                moveDirRight.X = 0;
+            if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y)] != 0 && moveDirRight.X < 0)
+                moveDirRight.X = 0;
+            if (map[(int)(_camera.Position.X), (int)(_camera.Position.Y + radius)] != 0 && moveDirRight.Y > 0)
+                moveDirRight.Y = 0;
+            if (map[(int)(_camera.Position.X), (int)(_camera.Position.Y - radius)] != 0 && moveDirRight.Y < 0)
+                moveDirRight.Y = 0;
+
+            _camera.Position  += moveDirForward * deltaTime;
+            _camera.Position += moveDirRight * deltaTime;
 
 
             _camera.Angle += _inputHandeler.MouseChange.X * deltaTime * 0.1f;
+
+            //_blinkFase = 1f + 0.5f * (float)Math.Sin(2 * Math.PI * 0.75f * gameTime.TotalGameTime.TotalSeconds);
+
+            _blinkFase += deltaTime * 0.5f;
+            while (_blinkFase > 1)
+                _blinkFase--;
+
+            // https://sound-works-12.itch.io/footsteps-small-sound-pack
+
+            if (Vector2.Distance(_prevPos, _camera.Position) > 0.5f)
+            {
+                _prevPos = _camera.Position;
+                _soundEffects["S_Stone_Mono_" + _random.Next(1,20)].Play((float)_random.NextDouble() * 0.3f + 0.2f, 0, 0);
+            }
+
+            if (Mouse.GetState().LeftButton == ButtonState.Pressed)
+            {
+                if (map[(int)(_camera.Position.X + _camera.Forward.X * 0.5f), (int)(_camera.Position.Y + _camera.Forward.Y * 0.5f)] == 100)
+                {
+                    map[(int)(_camera.Position.X + _camera.Forward.X * 0.5f), (int)(_camera.Position.Y + _camera.Forward.Y * 0.5f)] = 0;
+                    _soundEffects["beep"].Play();
+                }
+            }
 
             base.Update(gameTime);
         }
@@ -97,12 +215,12 @@ namespace Raycaster
 
             // TODO: Add your drawing code here
             _spriteBatch.Begin();
-            RaycastComputer.DrawScreen(_camera, _levels[0], _spriteBatch, _whiteTexture);
+            RaycastComputer.DrawScreen(_screenRes,_camera, _levels[0], _spriteBatch, _textureSheet, _whiteTexture, _glowTexture, _blinkFase);
             if (_enableTopView)
                 RaycastComputer.DrawTopView(_camera, _levels[0], _spriteBatch, _whiteTexture);
             _spriteBatch.End();
 
-            Debug.WriteLine(1/deltaTime);
+            //Debug.WriteLine(1/deltaTime);
 
             base.Draw(gameTime);
         }

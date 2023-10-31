@@ -14,7 +14,7 @@ namespace Raycaster
         public int Upscale { get; set; }
 
         public float Angle { get; set; }
-        public Vector2 Position { get; set; } = Vector2.One;
+        public Vector2 Position { get; set; } = Vector2.One*1.5f;
         public Vector2 Right => new Vector2(MathF.Cos(Angle+MathF.PI/2), MathF.Sin(Angle+MathF.PI / 2));
 
         public Vector2 Forward => new Vector2(MathF.Cos(Angle), MathF.Sin(Angle));
