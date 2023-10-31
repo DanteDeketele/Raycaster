@@ -165,12 +165,16 @@ namespace Raycaster
 
         private static void RenderPixelPatern(Point screenRes, Camera camera, SpriteBatch spriteBatch, Texture2D whiteTexture, int x, int y, int[,] patern)
         {
-            float virtualpixelSize = screenRes.X / camera.Width;
-            virtualpixelSize /= 3;
+            float virtualpixelSize = (screenRes.X / camera.Width)/3 + 1;
 
-            Vector2 distortion = screenRes.ToVector2() - new Vector2(camera.Width * virtualpixelSize*3, camera.Height * virtualpixelSize*3) ;
+            Vector2 distortion = screenRes.ToVector2() - new Vector2(camera.Width * (int)(virtualpixelSize*3), camera.Height * (int)(virtualpixelSize*3));
 
             distortion = -distortion;
+
+            if (distortion.X > 0)
+            {
+                //virtualpixelSize++;
+            }
 
             for (int x1 = 0; x1 < 3; x1++)
             {
@@ -178,7 +182,7 @@ namespace Raycaster
                 {
                     Color color = patern[x1, y1] == 1 ? Color.White : Color.Black;
 
-                    spriteBatch.Draw(whiteTexture, new Rectangle((int)(x * virtualpixelSize * 3 + x1 * virtualpixelSize - (int)distortion.X/2), (int)(y * virtualpixelSize * 3 + y1 * virtualpixelSize - (int)distortion.Y / 2), (int)virtualpixelSize, (int)virtualpixelSize), color);
+                    spriteBatch.Draw(whiteTexture, new Rectangle((int)(x * virtualpixelSize * 3 + x1 * virtualpixelSize - distortion.X/2), (int)(y * virtualpixelSize * 3 + y1 * virtualpixelSize - distortion.Y / 2), (int)virtualpixelSize, (int)virtualpixelSize), color);
                 }
             }
         }
