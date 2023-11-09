@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace Raycaster
 {
@@ -21,6 +18,9 @@ namespace Raycaster
         public int[,] MapData { get; private set; }
         public int Width => MapData.GetLength(0);
         public int Height => MapData.GetLength(1);
+
+        public Entity[] entities;
+
         public int GetCellValue(int x, int y) => MapData[x, y];
         public void SetCellValue(int x, int y, int value)
         {
@@ -44,6 +44,13 @@ namespace Raycaster
             }
 
             return text;
+        }
+
+        public void DrawEntities(Point screenRes,Camera camera, SpriteBatch spriteBatch, Texture2D whiteTexture)
+        {
+            foreach (Entity entity in entities) {
+                RaycastComputer.DrawEntity(screenRes,camera, entity, spriteBatch, whiteTexture, entity.DistanceToCamera < 4);
+            }
         }
     }
 }

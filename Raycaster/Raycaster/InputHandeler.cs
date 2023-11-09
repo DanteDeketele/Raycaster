@@ -50,8 +50,6 @@ namespace Raycaster
                     dir = Vector2.Normalize(dir) * MathF.Min(1, dir.Length());
                 }
 
-                Debug.WriteLine(dir.ToString());
-
                 return dir;
             }
         }

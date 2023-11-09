@@ -24,6 +24,8 @@ namespace Raycaster
         private Texture2D _whiteTexture;
         private Texture2D _textureSheet;
         private Texture2D _glowTexture;
+        private Texture2D _enemieTexture;
+
 
         private Random _random = new Random();
 
@@ -60,7 +62,7 @@ namespace Raycaster
 
         protected override void Initialize()
         {
-            _camera = new Camera(320, 180, 12);
+            _camera = new Camera(320, 180);
             _prevPos = _camera.Position;
             _inputHandeler = new InputHandeler(new Point(_graphics.PreferredBackBufferWidth/2, _graphics.PreferredBackBufferHeight/2));
 
@@ -90,9 +92,17 @@ namespace Raycaster
             FileStream fileStream1 = new FileStream("glow.png", FileMode.Open);
             _glowTexture = Texture2D.FromStream(GraphicsDevice, fileStream1);
             fileStream1.Dispose();
+            FileStream fileStream2 = new FileStream("enemies.png", FileMode.Open);
+            _enemieTexture = Texture2D.FromStream(GraphicsDevice, fileStream2);
+            fileStream2.Dispose();
 
             _soundEffects = AudioUnpacker.GetSounds("Sounds");
             _soundEffects["music"].Play(0.1f, 0, 0);
+
+            _levels[0].entities = new Entity[2];
+            _levels[0].entities[0] = new Entity(_enemieTexture, new Vector2(3.5f, 3.5f));
+            _levels[0].entities[1] = new Entity(_enemieTexture, new Vector2(4.5f, 3.5f), MathF.PI);
+
         }
 
         protected override void UnloadContent()
@@ -122,65 +132,86 @@ namespace Raycaster
 
             int[,] map = _levels[0].MapData;
 
-            Vector2 moveDirForward = _camera.Forward * InputHandeler.MoveDirection.Y;
-            Vector2 moveDirRight = _camera.Right * InputHandeler.MoveDirection.X;
+            float speed = 1f;
+            if (Keyboard.GetState().IsKeyDown(Keys.LeftShift))
+                speed = 1.6f;
 
-            /*if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirForward.X > 0)
-                moveDirForward.X = 0;
-            if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirForward.X < 0)
-                moveDirForward.X = 0;
-            if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirForward.Y > 0)
-                moveDirForward.Y = 0;
-            if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirForward.Y < 0)
-                moveDirForward.Y = 0;
-            if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirRight.X > 0)
-                moveDirRight.X = 0;
-            if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirRight.X < 0)
-                moveDirRight.X = 0;
-            if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirRight.Y > 0)
-                moveDirRight.Y = 0;
-            if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirRight.Y < 0)
-                moveDirRight.Y = 0;
+            Vector2 moveDirForward = _camera.Forward * InputHandeler.MoveDirection.Y * speed * 2;
+            Vector2 moveDirRight = _camera.Right * InputHandeler.MoveDirection.X * speed*2;
 
-            if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirForward.X > 0)
-                moveDirForward.X = 0;
-            if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirForward.X < 0)
-                moveDirForward.X = 0;
-            if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirForward.Y > 0)
-                moveDirForward.Y = 0;
-            if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirForward.Y < 0)
-                moveDirForward.Y = 0;
-            if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirRight.X > 0)
-                moveDirRight.X = 0;
-            if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirRight.X < 0)
-                moveDirRight.X = 0;
-            if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirRight.Y > 0)
-                moveDirRight.Y = 0;
-            if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirRight.Y < 0)
-                moveDirRight.Y = 0;*/
 
-            if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y)] != 0 && moveDirForward.X > 0)
-                moveDirForward.X = 0;
-            if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y)] != 0 && moveDirForward.X < 0)
-                moveDirForward.X = 0;
-            if (map[(int)(_camera.Position.X), (int)(_camera.Position.Y + radius)] != 0 && moveDirForward.Y > 0)
-                moveDirForward.Y = 0;
-            if (map[(int)(_camera.Position.X), (int)(_camera.Position.Y - radius)] != 0 && moveDirForward.Y < 0)
-                moveDirForward.Y = 0;
-            if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y)] != 0 && moveDirRight.X > 0)
-                moveDirRight.X = 0;
-            if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y)] != 0 && moveDirRight.X < 0)
-                moveDirRight.X = 0;
-            if (map[(int)(_camera.Position.X), (int)(_camera.Position.Y + radius)] != 0 && moveDirRight.Y > 0)
-                moveDirRight.Y = 0;
-            if (map[(int)(_camera.Position.X), (int)(_camera.Position.Y - radius)] != 0 && moveDirRight.Y < 0)
-                moveDirRight.Y = 0;
 
-            _camera.Position  += moveDirForward * deltaTime;
-            _camera.Position += moveDirRight * deltaTime;
+            try
+            {
+
+                /*if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirForward.X > 0)
+                    moveDirForward.X = 0;
+                if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirForward.X < 0)
+                    moveDirForward.X = 0;
+                if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirForward.Y > 0)
+                    moveDirForward.Y = 0;
+                if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirForward.Y < 0)
+                    moveDirForward.Y = 0;
+                if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirRight.X > 0)
+                    moveDirRight.X = 0;
+                if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirRight.X < 0)
+                    moveDirRight.X = 0;
+                if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirRight.Y > 0)
+                    moveDirRight.Y = 0;
+                if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirRight.Y < 0)
+                    moveDirRight.Y = 0;
+
+                if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirForward.X > 0)
+                    moveDirForward.X = 0;
+                if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirForward.X < 0)
+                    moveDirForward.X = 0;
+                if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirForward.Y > 0)
+                    moveDirForward.Y = 0;
+                if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirForward.Y < 0)
+                    moveDirForward.Y = 0;
+                if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirRight.X > 0)
+                    moveDirRight.X = 0;
+                if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirRight.X < 0)
+                    moveDirRight.X = 0;
+                if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y + radius)] == 1 && moveDirRight.Y > 0)
+                    moveDirRight.Y = 0;
+                if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y - radius)] == 1 && moveDirRight.Y < 0)
+                    moveDirRight.Y = 0;*/
+
+                if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y)] != 0 && moveDirForward.X > 0)
+                    moveDirForward.X = 0;
+                if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y)] != 0 && moveDirForward.X < 0)
+                    moveDirForward.X = 0;
+                if (map[(int)(_camera.Position.X), (int)(_camera.Position.Y + radius)] != 0 && moveDirForward.Y > 0)
+                    moveDirForward.Y = 0;
+                if (map[(int)(_camera.Position.X), (int)(_camera.Position.Y - radius)] != 0 && moveDirForward.Y < 0)
+                    moveDirForward.Y = 0;
+                if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y)] != 0 && moveDirRight.X > 0)
+                    moveDirRight.X = 0;
+                if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y)] != 0 && moveDirRight.X < 0)
+                    moveDirRight.X = 0;
+                if (map[(int)(_camera.Position.X), (int)(_camera.Position.Y + radius)] != 0 && moveDirRight.Y > 0)
+                    moveDirRight.Y = 0;
+                if (map[(int)(_camera.Position.X), (int)(_camera.Position.Y - radius)] != 0 && moveDirRight.Y < 0)
+                    moveDirRight.Y = 0;
+
+                _camera.Position += moveDirForward * deltaTime;
+                _camera.Position += moveDirRight * deltaTime;
+
+            }catch(Exception ex)
+            {
+                Debug.WriteLine(ex.Message + " | " + ex.Source, "ERROR");
+                Exit();
+            }
 
 
             _camera.Angle += _inputHandeler.MouseChange.X * deltaTime * 0.1f;
+
+            if (_camera.Angle > MathF.PI * 2)
+                _camera.Angle -= MathF.PI * 2;
+
+            if (_camera.Angle < 0)
+                _camera.Angle += MathF.PI * 2;
 
             //_blinkFase = 1f + 0.5f * (float)Math.Sin(2 * Math.PI * 0.75f * gameTime.TotalGameTime.TotalSeconds);
 
@@ -190,7 +221,7 @@ namespace Raycaster
 
             // https://sound-works-12.itch.io/footsteps-small-sound-pack
 
-            if (Vector2.Distance(_prevPos, _camera.Position) > 0.5f)
+            if (Vector2.Distance(_prevPos, _camera.Position) > 1f)
             {
                 _prevPos = _camera.Position;
                 _soundEffects["S_Stone_Mono_" + _random.Next(1,20)].Play((float)_random.NextDouble() * 0.3f + 0.2f, 0, 0);
@@ -205,6 +236,16 @@ namespace Raycaster
                 }
             }
 
+            foreach (var entity in _levels[0].entities)
+            {
+                entity.Update(deltaTime, _camera);
+            }
+
+            _camera.Render = !Keyboard.GetState().IsKeyDown(Keys.R);
+
+
+            _camera.Update(deltaTime);
+
             base.Update(gameTime);
         }
 
@@ -216,11 +257,17 @@ namespace Raycaster
             // TODO: Add your drawing code here
             _spriteBatch.Begin();
             RaycastComputer.DrawScreen(_screenRes,_camera, _levels[0], _spriteBatch, _textureSheet, _whiteTexture, _glowTexture, _blinkFase);
+            _levels[0].DrawEntities(_screenRes,_camera, _spriteBatch, _whiteTexture);
+            RaycastComputer.DrawEntityOutlines(_screenRes, _camera, _spriteBatch, _whiteTexture);
+
+
             if (_enableTopView)
-                RaycastComputer.DrawTopView(_camera, _levels[0], _spriteBatch, _whiteTexture);
+                RaycastComputer.DrawTopView( _camera, _levels[0], _spriteBatch, _whiteTexture);
             _spriteBatch.End();
 
             //Debug.WriteLine(1/deltaTime);
+
+            _camera.ClearEntityBuffer();
 
             base.Draw(gameTime);
         }

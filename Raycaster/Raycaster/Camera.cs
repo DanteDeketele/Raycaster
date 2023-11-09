@@ -11,18 +11,57 @@ namespace Raycaster
 
         public float Radius { get; set; } = 0.1f;
 
-        public int Upscale { get; set; }
-
         public float Angle { get; set; }
+
+        public float[] DepthBuffer;
+
+        public float[,] EntityBuffer;
+
+        public bool Render;
+
+        public float RenderLoaded;
+        public float[,] RenderLoadBuffer;
+
+        private Random random = new Random(0);
+
         public Vector2 Position { get; set; } = Vector2.One*1.5f;
         public Vector2 Right => new Vector2(MathF.Cos(Angle+MathF.PI/2), MathF.Sin(Angle+MathF.PI / 2));
 
         public Vector2 Forward => new Vector2(MathF.Cos(Angle), MathF.Sin(Angle));
-        public Camera(int width, int height, int upscale)
+        public Camera(int width, int height)
         {
             Width = width;
             Height = height;
-            Upscale = upscale;
+            DepthBuffer = new float[width];
+            EntityBuffer = new float[width,height];
+            RenderLoadBuffer = new float[width,height];
+
+            for (int i = 0; i < width; i++)
+            {
+                for (int j = 0; j < height; j++)
+                {
+                    RenderLoadBuffer[i, j] = random.NextSingle();
+                }
+            }
+        }
+
+        public void Update(float deltaTime)
+        {
+            if (Render){
+                if (RenderLoaded < 1)
+                    RenderLoaded += deltaTime * 2;
+            }
+            else
+            {
+                if (RenderLoaded > 0)
+                    RenderLoaded -= deltaTime * 2;
+            }
+            
+        }
+
+        public void ClearEntityBuffer()
+        {
+            EntityBuffer = new float[Width,Height];
         }
     }
 }

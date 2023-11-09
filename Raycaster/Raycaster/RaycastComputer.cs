@@ -94,7 +94,9 @@ namespace Raycaster
                 else
                     perpWallDist = (mapY - position.Y + (1 - stepY) / 2) / rayDir.Y;
 
-                int projectedHeight = (int)(height / perpWallDist);
+                camera.DepthBuffer[i] = (float)perpWallDist;
+
+                int projectedHeight = (int)((height) / perpWallDist);
 
                 int drawStart = Math.Max(0, (height - projectedHeight) / 2);
                 int drawEnd = Math.Min(height - 1, (height + projectedHeight) / 2);
@@ -117,6 +119,8 @@ namespace Raycaster
                 if ((side == 0 && rayDir.X > 0) || (side == 1 && rayDir.Y < 0))
                     texXglow = texWidthGlow - texXglow - 1;
 
+
+
                 for (int y = drawStart; y <= drawEnd; y++)
                 {
                     int texY = (int)((y - drawStart - MathF.Min(0, offset / 2)) * (float)textureSheet.Height / projectedHeight);
@@ -126,10 +130,6 @@ namespace Raycaster
                     int brightness = 19;
                     brightness -= side * 2;
 
-                    if (side == 0)
-                        perpWallDist = (mapX - position.X + (1 - stepX) / 2) / rayDir.X;
-                    else
-                        perpWallDist = (mapY - position.Y + (1 - stepY) / 2) / rayDir.Y;
 
                     brightness -= (int)(perpWallDist * 2);
 
@@ -159,12 +159,18 @@ namespace Raycaster
 
                     int[,] patern = PixelPatern(brightness);
                     RenderPixelPatern(screenRes, camera, spriteBatch, whiteTexture, i, y, patern);
+                    //float virtualpixelSize = (screenRes.X / camera.Width);
+                    //Vector2 distortion = screenRes.ToVector2() - new Vector2(camera.Width * (int)(virtualpixelSize), camera.Height * (int)(virtualpixelSize));
+                    //spriteBatch.Draw(whiteTexture, new Rectangle((int)(i * virtualpixelSize - distortion.X / 2), (int)(y * virtualpixelSize - distortion.Y / 2), (int)virtualpixelSize, (int)virtualpixelSize), c);
                 }
             }
         }
 
         private static void RenderPixelPatern(Point screenRes, Camera camera, SpriteBatch spriteBatch, Texture2D whiteTexture, int x, int y, int[,] patern)
         {
+            if (camera.RenderLoadBuffer[x, y] > camera.RenderLoaded)
+                return;
+
             float virtualpixelSize = (screenRes.X / camera.Width)/3 + 1;
 
             Vector2 distortion = screenRes.ToVector2() - new Vector2(camera.Width * (int)(virtualpixelSize*3), camera.Height * (int)(virtualpixelSize*3));
@@ -231,15 +237,159 @@ namespace Raycaster
             return new Rectangle(sourceX, sourceY, tileWidth, tileHeight);
         }
 
+        public static void DrawEntity(Point screenRes, Camera camera, Entity entity, SpriteBatch spriteBatch, Texture2D whiteTexture, bool outlined = false)
+        {
+            Color transparent = new Color(155, 0, 139);
+
+            float angleDifference = MathF.Atan2(entity.Position.Y - camera.Position.Y, entity.Position.X - camera.Position.X) - camera.Angle;
+            if (angleDifference < -MathF.PI)
+            {
+                angleDifference += 2 * MathF.PI;
+            }
+            else if (angleDifference > MathF.PI)
+            {
+                angleDifference -= 2 * MathF.PI;
+            }
+
+            Color[] colorData = new Color[entity.Texture.Width * entity.Texture.Height];
+            entity.Texture.GetData(colorData);
+
+            Vector2 cameraToEntity = entity.Position - camera.Position;
+
+            float distance = -MathF.Abs(angleDifference * 0.4f) + cameraToEntity.Length();
+            int width = (int)(camera.Height / distance);
+            int AngleOffset = (int)((angleDifference) / 2 * camera.Width + angleDifference * camera.Width / 9);
+
+
+            // TODO: Calculate sprite to use
+            float lookAngle = MathF.Atan2(entity.Position.Y - camera.Position.Y, entity.Position.X - camera.Position.X) - entity.Angle;
+
+            if (lookAngle < -MathF.PI)
+            {
+                lookAngle += 2 * MathF.PI;
+            }
+            else if (lookAngle > MathF.PI)
+            {
+                lookAngle -= 2 * MathF.PI;
+            }
+
+
+
+            int spriteId = (int)(7-((lookAngle + MathF.PI) / (MathF.PI * 2) *8)+1.5f);
+
+            if (spriteId < 0)
+            {
+                spriteId += 8;
+            }
+            else if (spriteId > 7)
+            {
+                spriteId -= 8;
+            }
+            spriteId += 8 * entity.State;
+
+            for (int i = 0; i < width; i++)
+            {
+                
+
+                int xPos = i+camera.Width/2-width/2;
+                xPos += AngleOffset;
+
+                if (xPos < 0 || xPos >= camera.Width)
+                    continue;
+
+                if (camera.DepthBuffer[xPos] <= distance)
+                    continue;
+
+                for (int j = 0; j < width; j++)
+                {
+                    int yPos = j + camera.Height/2 - width / 2;
+
+                    if (yPos < 0 || yPos >= camera.Height)
+                        continue;
+                    
+                    if (camera.EntityBuffer[xPos, yPos] < distance && camera.EntityBuffer[xPos, yPos] != 0)
+                        continue;
+
+                    int brightness = 19;
+
+                    brightness -= (int)(distance);
+
+                    if (brightness < 0)
+                        brightness = 0;
+                    if (brightness > 19)
+                        brightness = 19;
+
+                    Color c = GetTextureColor(colorData, entity.Texture, (int)(i* distance*5), (int)(j * distance*5), new Rectangle(entity.Texture.Width / 8 * (spriteId%8), entity.Texture.Height / 7 * (spriteId/8), entity.Texture.Width/8, entity.Texture.Height/7));
+
+                    if (c == transparent)
+                        continue;
+
+                    int br = (c.R + c.G + c.B) / 3;
+                    br = 255 - br;
+                    br *= 17;
+                    br /= 255;
+
+                    brightness -= br;
+
+                    int[,] patern = PixelPatern(brightness);
+                    RenderPixelPatern(screenRes, camera, spriteBatch, whiteTexture, xPos, yPos, patern);
+
+                    if (outlined)
+                        camera.EntityBuffer[xPos, yPos] = distance;
+                }
+            }
+        }
+
+        public static void DrawEntityOutlines(Point screenRes, Camera camera, SpriteBatch spriteBatch, Texture2D whiteTexture)
+        {
+            for (int i = 1; i < camera.Width-1; i++)
+            {
+                for (int j = 1; j < camera.Height-1; j++)
+                {
+                    if (camera.EntityBuffer[i, j] == 0)
+                    {
+                        if (camera.EntityBuffer[i + 1, j] != 0 ||
+                            camera.EntityBuffer[i + 1, j + 1] != 0 ||
+                            camera.EntityBuffer[i + 1, j - 1] != 0 ||
+                            camera.EntityBuffer[i, j + 1] != 0 ||
+                            camera.EntityBuffer[i, j - 1] != 0 ||
+                            camera.EntityBuffer[i - 1, j] != 0 ||
+                            camera.EntityBuffer[i - 1, j + 1] != 0 ||
+                            camera.EntityBuffer[i - 1, j - 1] != 0)
+                        {
+                            int[,] patern = PixelPatern(19);
+                            RenderPixelPatern(screenRes, camera, spriteBatch, whiteTexture, i, j, patern);
+                        }
+                    }
+                }
+            }
+        }
+
+        public static float CalculateDistanceToCameraPlane(Vector2 cameraPosition, Vector2 spritePosition, Vector2 cameraForward)
+        {
+            // Calculate the vector from the camera to the sprite
+            Vector2 cameraToSprite = spritePosition - cameraPosition;
+
+            // Calculate the angle between cameraToSprite and the camera's forward vector
+            float angle = MathF.Acos(Vector2.Dot(Vector2.Normalize(cameraToSprite), Vector2.Normalize(cameraForward)));
+
+            // Calculate the distance from the sprite to its projection on the camera's plane
+            float distanceToCameraPlane = cameraToSprite.Length() * MathF.Cos(angle);
+
+            return distanceToCameraPlane;
+        }
+
+
+        static float CalculateAngleDifference(float angle1, float angle2)
+        {
+            float angle = (angle1 - angle2 + MathF.PI) % (2 * MathF.PI) - MathF.PI;
+            return angle;
+        }
 
 
         public static void DrawTopView(Camera camera, Level level, SpriteBatch spriteBatch, Texture2D textureSheet)
         {
-            int width = camera.Width/2;
-            int height = camera.Height/2;
-
-            width *= camera.Upscale;
-            height *= camera.Upscale;
+            int width = camera.Width*2;
 
             int[,] map = level.MapData;
 
