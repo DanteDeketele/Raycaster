@@ -22,6 +22,8 @@ namespace Raycaster
         public float RenderLoaded;
         public float[,] RenderLoadBuffer;
 
+        public bool[,] RenderWorldBuffer;
+
         private Random random = new Random(0);
 
         public Vector2 Position { get; set; } = Vector2.One*1.5f;
@@ -35,12 +37,14 @@ namespace Raycaster
             DepthBuffer = new float[width];
             EntityBuffer = new float[width,height];
             RenderLoadBuffer = new float[width,height];
+            RenderWorldBuffer = new bool[width,height];
 
             for (int i = 0; i < width; i++)
             {
                 for (int j = 0; j < height; j++)
                 {
                     RenderLoadBuffer[i, j] = random.NextSingle();
+                    RenderWorldBuffer[i, j] = true;
                 }
             }
         }
@@ -62,6 +66,15 @@ namespace Raycaster
         public void ClearEntityBuffer()
         {
             EntityBuffer = new float[Width,Height];
+            RenderWorldBuffer = new bool[Width, Height];
+
+            for (int i = 0; i < Width; i++)
+            {
+                for (int j = 0; j < Height; j++)
+                {
+                    RenderWorldBuffer[i, j] = true;
+                }
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System.Collections.Generic;
 
 namespace Raycaster
 {
@@ -19,7 +20,7 @@ namespace Raycaster
         public int Width => MapData.GetLength(0);
         public int Height => MapData.GetLength(1);
 
-        public Entity[] entities;
+        public List<Entity> entities = new List<Entity>();
 
         public int GetCellValue(int x, int y) => MapData[x, y];
         public void SetCellValue(int x, int y, int value)

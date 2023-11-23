@@ -10,7 +10,7 @@ namespace Raycaster.Levels
 {
     internal class LevelUnpacker
     {
-        const string FOLDERNAME = "Levels";
+        const string FOLDERNAME = "Assets/Levels";
         const string METADATAFILE = "metadata";
         const string METADATAFILEEXT = "levels";
 

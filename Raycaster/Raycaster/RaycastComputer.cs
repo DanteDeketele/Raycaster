@@ -1,7 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
-using System.Diagnostics;
 
 namespace Raycaster
 {
@@ -98,7 +97,7 @@ namespace Raycaster
 
                 int projectedHeight = (int)((height) / perpWallDist);
 
-                int drawStart = Math.Max(0, (height - projectedHeight) / 2);
+                int drawStart = Math.Max(0, (height - projectedHeight) / 2 );
                 int drawEnd = Math.Min(height - 1, (height + projectedHeight) / 2);
 
                 int offset = height - projectedHeight;
@@ -131,7 +130,7 @@ namespace Raycaster
                     brightness -= side * 2;
 
 
-                    brightness -= (int)(perpWallDist * 2);
+                    brightness -= (int)(perpWallDist*1.5f);
 
                     if (brightness < 0)
                         brightness = 0;
@@ -169,6 +168,9 @@ namespace Raycaster
         private static void RenderPixelPatern(Point screenRes, Camera camera, SpriteBatch spriteBatch, Texture2D whiteTexture, int x, int y, int[,] patern)
         {
             if (camera.RenderLoadBuffer[x, y] > camera.RenderLoaded)
+                return;
+
+            if (!camera.RenderWorldBuffer[x, y])
                 return;
 
             float virtualpixelSize = (screenRes.X / camera.Width)/3 + 1;
@@ -257,7 +259,7 @@ namespace Raycaster
             Vector2 cameraToEntity = entity.Position - camera.Position;
 
             float distance = -MathF.Abs(angleDifference * 0.4f) + cameraToEntity.Length();
-            int width = (int)(camera.Height / distance);
+            int width = (int)((camera.Height / distance)*entity.Size);
             int AngleOffset = (int)((angleDifference) / 2 * camera.Width + angleDifference * camera.Width / 9);
 
 
@@ -275,7 +277,7 @@ namespace Raycaster
 
 
 
-            int spriteId = (int)(7-((lookAngle + MathF.PI) / (MathF.PI * 2) *8)+1.5f);
+            int spriteId = (int)(7-((lookAngle + MathF.PI) / (MathF.PI * 2) *8) + MathF.PI * 0.5f);
 
             if (spriteId < 0)
             {
@@ -303,6 +305,10 @@ namespace Raycaster
                 for (int j = 0; j < width; j++)
                 {
                     int yPos = j + camera.Height/2 - width / 2;
+                    if (entity.IsBullet)
+                    {
+                        yPos += (int)(40/distance);
+                    }
 
                     if (yPos < 0 || yPos >= camera.Height)
                         continue;
@@ -312,7 +318,7 @@ namespace Raycaster
 
                     int brightness = 19;
 
-                    brightness -= (int)(distance);
+                    brightness -= (int)(distance*0.75f);
 
                     if (brightness < 0)
                         brightness = 0;
@@ -334,7 +340,7 @@ namespace Raycaster
                     int[,] patern = PixelPatern(brightness);
                     RenderPixelPatern(screenRes, camera, spriteBatch, whiteTexture, xPos, yPos, patern);
 
-                    if (outlined)
+                    if (outlined && !entity.IsBullet)
                         camera.EntityBuffer[xPos, yPos] = distance;
                 }
             }
@@ -364,6 +370,66 @@ namespace Raycaster
                 }
             }
         }
+
+        public static void DrawGunOutlines(Point screenRes, Camera camera, SpriteBatch spriteBatch, Texture2D whiteTexture)
+        {
+            for (int i = 1; i < camera.Width - 1; i++)
+            {
+                for (int j = 1; j < camera.Height - 1; j++)
+                {
+                    if (camera.RenderWorldBuffer[i, j])
+                    {
+                        if (!camera.RenderWorldBuffer[i + 1, j] ||
+                            !camera.RenderWorldBuffer[i + 1, j + 1]||
+                            !camera.RenderWorldBuffer[i + 1, j - 1] ||
+                            !camera.RenderWorldBuffer[i, j + 1]||
+                            !camera.RenderWorldBuffer[i, j - 1] ||
+                            !camera.RenderWorldBuffer[i - 1, j]  ||
+                            !camera.RenderWorldBuffer[i - 1, j + 1] ||
+                            !camera.RenderWorldBuffer[i - 1, j - 1] )
+                        {
+                            int[,] patern = PixelPatern(19);
+                            RenderPixelPatern(screenRes, camera, spriteBatch, whiteTexture, i, j, patern);
+                        }
+                    }
+                }
+            }
+        }
+
+        public static void DrawGun(Point screenRes, Camera camera, int gun, int frame, SpriteBatch spriteBatch, Texture2D texture, Texture2D whiteTexture)
+        {
+            Color transparent = new Color(152, 0, 136);
+
+            int size = camera.Height / 2;
+
+            Color[] colorData = new Color[texture.Width * texture.Height];
+            texture.GetData(colorData);
+
+            for (int x = 0; x < size; x++)
+            {
+                for (int y = 0; y < size; y++)
+                {
+                    int brightness = 19;
+
+                    Color c = GetTextureColor(colorData, texture, x * (texture.Width/size), y * (texture.Height / size), new Rectangle((texture.Width / 5)*(frame)+frame, (texture.Height / 4)*gun+ gun, texture.Width / 4-4-1, texture.Height / 3));
+
+                    if (c == transparent)
+                        continue;
+
+                    int br = (c.R + c.G + c.B) / 3;
+                    br = 255 - br;
+                    br *= 19;
+                    br /= 255;
+
+                    brightness -= br;
+
+                    int[,] patern = PixelPatern(brightness);
+                    RenderPixelPatern(screenRes, camera, spriteBatch, whiteTexture, x + camera.Width/2 - (int)(size*0.5f), y+camera.Height-size-10, patern);
+                    camera.RenderWorldBuffer[x + camera.Width / 2 -(int)(size * 0.5f), y+camera.Height - size - 10] = false;
+                }
+            }
+        }
+
 
         public static float CalculateDistanceToCameraPlane(Vector2 cameraPosition, Vector2 spritePosition, Vector2 cameraForward)
         {
@@ -562,6 +628,168 @@ namespace Raycaster
                 { 0, 0, 0},
                 { 0, 0, 0}
             };
+        }
+
+        public static void DrawFont(string text, Point topLeft, Point screenRes, Camera cam, Texture2D whiteTexture, SpriteBatch spriteBatch)
+        {
+            if (string.IsNullOrEmpty(text)) return;
+
+            char[] characters = text.ToCharArray();
+
+            for (int i = 0; i < characters.Length; i++)
+            {
+                char c = characters[i];
+                int[,] fontPatern = FontPatern(c);
+
+                for (int x = 0; x < 8; x++)
+                {
+                    for (int y = 0; y < 8; y++)
+                    {
+                        int[,] patern = PixelPatern(fontPatern[y,x]*19);
+
+                        RenderPixelPatern(screenRes, cam, spriteBatch, whiteTexture, topLeft.X + x + i * 8, topLeft.Y + y, patern);
+                    }
+                }
+            }
+        }
+
+        private static int[,] FontPatern(char number)
+        {
+            switch (number)
+            {
+                case '0':
+                    return new int[,]
+                    {
+                        { 0,0,1,1,1,1,0,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,1,1,1,0},
+                        { 0,1,1,1,1,1,1,0},
+                        { 0,1,1,1,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,0,1,1,1,1,0,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+                case '1':
+                    return new int[,]
+                    {
+                        { 0,0,0,1,1,0,0,0},
+                        { 0,0,1,1,1,0,0,0},
+                        { 0,1,1,1,1,0,0,0},
+                        { 0,0,0,1,1,0,0,0},
+                        { 0,0,0,1,1,0,0,0},
+                        { 0,0,0,1,1,0,0,0},
+                        { 0,0,0,1,1,0,0,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+                case '2':
+                    return new int[,]
+                    {
+                        { 0,0,1,1,1,1,0,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,0,0,0,0,1,1,0},
+                        { 0,0,0,0,1,1,0,0},
+                        { 0,0,0,1,1,0,0,0},
+                        { 0,0,1,1,0,0,0,0},
+                        { 0,1,1,1,1,1,1,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+                case '3':
+                    return new int[,]
+                    {
+                        { 0,0,1,1,1,1,0,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,0,0,0,0,1,1,0},
+                        { 0,0,0,1,1,1,0,0},
+                        { 0,0,0,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,0,1,1,1,1,0,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+                case '4':
+                    return new int[,]
+                    {
+                        { 0,0,0,1,1,1,0,0},
+                        { 0,0,1,1,1,1,0,0},
+                        { 0,1,1,0,1,1,0,0},
+                        { 1,1,0,0,1,1,0,0},
+                        { 1,1,1,1,1,1,1,0},
+                        { 0,0,0,0,1,1,0,0},
+                        { 0,0,0,0,1,1,0,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+                case '5':
+                    return new int[,]
+                    {
+                        { 0,1,1,1,1,1,1,0},
+                        { 0,1,1,0,0,0,0,0},
+                        { 0,1,1,1,1,1,0,0},
+                        { 0,0,0,0,0,1,1,0},
+                        { 0,0,0,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,0,1,1,1,1,0,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+                case '6':
+                    return new int[,]
+                    {
+                        { 0,0,0,1,1,1,0,0},
+                        { 0,0,1,1,0,0,0,0},
+                        { 0,1,1,0,0,0,0,0},
+                        { 0,1,1,1,1,1,0,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,0,1,1,1,1,0,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+                case '7':
+                    return new int[,]
+                    {
+                        { 0,1,1,1,1,1,1,0},
+                        { 0,0,0,0,0,1,1,0},
+                        { 0,0,0,0,0,1,1,0},
+                        { 0,0,0,0,1,1,0,0},
+                        { 0,0,0,1,1,0,0,0},
+                        { 0,0,0,1,1,0,0,0},
+                        { 0,0,0,1,1,0,0,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+                case '8':
+                    return new int[,]
+                    {
+                        { 0,0,1,1,1,1,0,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,0,1,1,1,1,0,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,0,1,1,1,1,0,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+                case '9':
+                    return new int[,]
+                    {
+                        { 0,0,1,1,1,1,0,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,0,1,1,1,1,1,0},
+                        { 0,0,0,0,0,1,1,0},
+                        { 0,0,0,0,1,1,0,0},
+                        { 0,0,1,1,1,0,0,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+                default:
+                    return new int[,]
+                    {
+                        { 0,0,0,0,0,0,0,0},
+                        { 0,0,0,0,0,0,0,0},
+                        { 0,0,0,0,0,0,0,0},
+                        { 0,0,0,0,0,0,0,0},
+                        { 0,0,0,0,0,0,0,0},
+                        { 0,0,0,0,0,0,0,0},
+                        { 0,0,0,0,0,0,0,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+            }
         }
         
     }
