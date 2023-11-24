@@ -1,9 +1,11 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Raycaster
 {
+
     internal class Entity
     {
         public Texture2D Texture;
@@ -23,6 +25,14 @@ namespace Raycaster
 
         public bool Active = true;
 
+        public bool IsStaticSprite = false;
+        public int StaticSprite = 0;
+
+        public float width = 1;
+        public Vector2 Position;
+        public float Angle = 0;
+        public float Radius = 0.3f;
+
         public Entity(Texture2D texture, Vector2 position, float angle = 0)
         {
             Texture = texture;
@@ -30,13 +40,9 @@ namespace Raycaster
             Angle = angle;
         }
 
-        public void Update(float time, Camera camera)
+        public virtual void Update(float time, Camera camera)
         {
-            
-
             DistanceToCamera = Vector2.Distance(Position, camera.Position);
-
-            
 
             if (waypoints.Length == 0)
             {
@@ -67,8 +73,15 @@ namespace Raycaster
             }
         }
 
-        public float width = 1;
-        public Vector2 Position;
-        public float Angle = 0;
+        public bool IsOverlapping(Entity entity)
+        {
+            if (Vector2.Distance(Position, entity.Position) < Radius + entity.Radius)
+            {
+                return true;
+            }
+            return false;
+        }
     }
+
+    
 }

@@ -52,6 +52,8 @@ namespace Raycaster
         private string _fpsCounter;
         private List<float> _fps = new List<float>();
 
+        private List<Enemy> _enemies = new List<Enemy>();
+
         public MainGame()
         {
             
@@ -118,10 +120,17 @@ namespace Raycaster
             _soundEffects = AudioUnpacker.GetSounds("Assets/Sounds");
             _soundEffects["music"].Play(0.1f, 0, 0);
 
-            _levels[0].entities.Add(new Entity(_enemieTexture, new Vector2(3.5f, 3.5f)));
-            _levels[0].entities[0].State = 6;
-            _levels[0].entities.Add(new Entity(_enemieTexture, new Vector2(4.5f, 3.5f), MathF.PI));
-            _levels[0].entities[1].waypoints = new Vector2[] { new Vector2(5, 5), new Vector2(2, 2), new Vector2(3, 8) };
+            Enemy enemy1 = new Enemy(_enemieTexture, new Vector2(1.5f, 7.5f), _soundEffects);
+            enemy1.State = 6;
+            enemy1.IsStaticSprite = true;
+            enemy1.StaticSprite = 47;
+            _levels[0].entities.Add(enemy1);
+            _enemies.Add(enemy1);
+
+            Enemy enemy2 = new Enemy(_enemieTexture, new Vector2(8.5f, 6.5f), _soundEffects, MathF.PI);
+            enemy2.waypoints = new Vector2[] { new Vector2(8.5f, 1.5f), new Vector2(8.5f, 6.5f)};
+            _levels[0].entities.Add(enemy2);
+            _enemies.Add(enemy2);
         }
 
         protected override void UnloadContent()
@@ -133,6 +142,7 @@ namespace Raycaster
 
         protected override void Update(GameTime gameTime)
         {
+
             _inputHandeler.Update();
 
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
@@ -170,12 +180,13 @@ namespace Raycaster
                 if (!_shootAnimation)
                 {
                     _shootAnimation = true;
-                    Entity bullet = new Entity(_whiteTexture, _camera.Position + _camera.Forward * 0.01f);
+                    Bullet bullet = new Bullet(_whiteTexture, _camera.Position + _camera.Forward * 0.01f, _enemies.ToArray(), 1);
                     bullet.waypoints = new Vector2[] { _camera.Forward * 10 + _camera.Position};
                     bullet.Speed = 20;
                     bullet.Size = 0.1f;
                     bullet.IsBullet = true;
                     _levels[0].entities.Add(bullet);
+                    _soundEffects["shot"].Play(0.1f, 0, 0);
                 }
                 
             }
@@ -268,6 +279,7 @@ namespace Raycaster
                 Exit();
             }
 
+            _camera.RollAngle = MathHelper.Lerp(_camera.RollAngle,-InputHandeler.MoveDirection.X * speed * 1.1f, deltaTime * 15) ;
 
             _camera.Angle += _inputHandeler.MouseChange.X * deltaTime * 0.1f;
 
@@ -303,6 +315,16 @@ namespace Raycaster
             foreach (var entity in _levels[0].entities)
             {
                 entity.Update(deltaTime, _camera);
+                
+                if (entity is Bullet)
+                {
+                    if (_levels[0].MapData[(int)entity.Position.X, (int)entity.Position.Y] != 0)
+                    {
+                        entity.Active = false;
+                        _soundEffects["shot"].Play(0.05f, 1f, 0);
+                    }
+                }
+
                 if (!entity.Active)
                 {
                     _entitiesToRemove.Add(entity);
@@ -312,6 +334,10 @@ namespace Raycaster
             foreach(var entity in _entitiesToRemove)
             {
                 _levels[0].entities.Remove(entity);
+                if (entity is Enemy)
+                {
+                    _enemies.Remove(entity as Enemy);
+                }
             }
             _entitiesToRemove.Clear();
 

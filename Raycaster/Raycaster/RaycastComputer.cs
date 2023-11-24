@@ -157,7 +157,7 @@ namespace Raycaster
                     brightness -= br;
 
                     int[,] patern = PixelPatern(brightness);
-                    RenderPixelPatern(screenRes, camera, spriteBatch, whiteTexture, i, y, patern);
+                    RenderPixelPatern(screenRes, camera, spriteBatch, whiteTexture, i, y + (int)((i - camera.Width/2)*camera.RollAngle*0.02f), patern);
                     //float virtualpixelSize = (screenRes.X / camera.Width);
                     //Vector2 distortion = screenRes.ToVector2() - new Vector2(camera.Width * (int)(virtualpixelSize), camera.Height * (int)(virtualpixelSize));
                     //spriteBatch.Draw(whiteTexture, new Rectangle((int)(i * virtualpixelSize - distortion.X / 2), (int)(y * virtualpixelSize - distortion.Y / 2), (int)virtualpixelSize, (int)virtualpixelSize), c);
@@ -167,6 +167,9 @@ namespace Raycaster
 
         private static void RenderPixelPatern(Point screenRes, Camera camera, SpriteBatch spriteBatch, Texture2D whiteTexture, int x, int y, int[,] patern)
         {
+            if (x < 0 || x >= camera.Width || y < 0 || y >= camera.Height)
+                return;
+
             if (camera.RenderLoadBuffer[x, y] > camera.RenderLoaded)
                 return;
 
@@ -289,6 +292,11 @@ namespace Raycaster
             }
             spriteId += 8 * entity.State;
 
+            if (entity.IsStaticSprite)
+            {
+                spriteId = entity.StaticSprite;
+            }
+
             for (int i = 0; i < width; i++)
             {
                 
@@ -338,10 +346,12 @@ namespace Raycaster
                     brightness -= br;
 
                     int[,] patern = PixelPatern(brightness);
-                    RenderPixelPatern(screenRes, camera, spriteBatch, whiteTexture, xPos, yPos, patern);
+                    RenderPixelPatern(screenRes, camera, spriteBatch, whiteTexture, xPos, yPos + (int)((xPos - camera.Width / 2) * camera.RollAngle * 0.02f), patern);
 
-                    if (outlined && !entity.IsBullet)
-                        camera.EntityBuffer[xPos, yPos] = distance;
+                    if (outlined && !entity.IsBullet && (yPos + (int)((xPos - camera.Width / 2) * camera.RollAngle * 0.02f)) > 0 && (yPos + (int)((xPos - camera.Width / 2) * camera.RollAngle * 0.02f)) < camera.Height-1)
+                    {
+                        camera.EntityBuffer[xPos, yPos + (int)((xPos - camera.Width / 2) * camera.RollAngle * 0.02f)] = distance;
+                    }
                 }
             }
         }

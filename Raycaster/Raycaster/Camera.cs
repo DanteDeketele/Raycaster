@@ -26,6 +26,8 @@ namespace Raycaster
 
         private Random random = new Random(0);
 
+        public float RollAngle = 0;
+
         public Vector2 Position { get; set; } = Vector2.One*1.5f;
         public Vector2 Right => new Vector2(MathF.Cos(Angle+MathF.PI/2), MathF.Sin(Angle+MathF.PI / 2));
 
