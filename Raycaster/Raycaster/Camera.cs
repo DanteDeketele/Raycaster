@@ -4,7 +4,7 @@ using System;
 
 namespace Raycaster
 {
-    internal class Camera
+    public class Camera
     {
         public int Width { get; set; }
         public int Height { get; set; }

@@ -59,8 +59,8 @@ namespace Raycaster
             mouseState = Mouse.GetState();
             prevMousePos = mousePos;
             mousePos = mouseState.Position;
-            if (MouseLocked)
-                Mouse.SetPosition(mouseOffset.X, mouseOffset.Y);
+            //if (MouseLocked)
+                //Mouse.SetPosition(mouseOffset.X, mouseOffset.Y);
         }
     }
 }

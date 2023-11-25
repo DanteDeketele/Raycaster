@@ -1,67 +1,4 @@
-﻿/*using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Media;
-using System.Linq;
-
-namespace Raycaster
-{
-    internal class AudioUnpacker
-    {
-        public static Dictionary<string, SoundPlayer> GetSounds(string folderName)
-        {
-            Dictionary<string, SoundPlayer> soundDictionary = new Dictionary<string, SoundPlayer>();
-
-            string[] soundFiles = Directory.EnumerateFiles(folderName, "*.*")
-                .Where(file => file.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase) || file.EndsWith(".wav", StringComparison.OrdinalIgnoreCase))
-                .ToArray();
-
-            foreach (var item in soundFiles)
-            {
-                Debug.WriteLine(item);
-            }
-
-            foreach (string soundFile in soundFiles)
-            {
-                string soundName = Path.GetFileNameWithoutExtension(soundFile);
-
-                SoundPlayer soundPlayer;
-                if (soundFile.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase))
-                {
-                    soundPlayer = LoadSoundPlayerFromMp3(soundFile);
-                }
-                else if (soundFile.EndsWith(".wav", StringComparison.OrdinalIgnoreCase))
-                {
-                    soundPlayer = LoadSoundPlayerFromWav(soundFile);
-                }
-                else
-                {
-                    // Unsupported file type
-                    continue;
-                }
-
-                soundDictionary[soundName] = soundPlayer;
-            }
-
-            return soundDictionary;
-        }
-
-        private static SoundPlayer LoadSoundPlayerFromMp3(string mp3FilePath)
-        {
-            SoundPlayer soundPlayer = new SoundPlayer(mp3FilePath);
-            return soundPlayer;
-        }
-
-        private static SoundPlayer LoadSoundPlayerFromWav(string wavFilePath)
-        {
-            SoundPlayer soundPlayer = new SoundPlayer(wavFilePath);
-            return soundPlayer;
-        }
-    }
-}*/
-
-using Microsoft.Xna.Framework.Audio;
+﻿using Microsoft.Xna.Framework.Audio;
 using NAudio.Wave;
 using System;
 using System.Collections.Generic;
@@ -69,7 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
-namespace Raycaster
+namespace Raycaster.Sounds
 {
     internal class AudioUnpacker
     {

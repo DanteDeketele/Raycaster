@@ -1,6 +1,7 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
+using System.Diagnostics;
 
 namespace Raycaster
 {
@@ -194,6 +195,24 @@ namespace Raycaster
                     Color color = patern[x1, y1] == 1 ? Color.White : Color.Black;
 
                     spriteBatch.Draw(whiteTexture, new Rectangle((int)(x * virtualpixelSize * 3 + x1 * virtualpixelSize - distortion.X/2), (int)(y * virtualpixelSize * 3 + y1 * virtualpixelSize - distortion.Y / 2), (int)virtualpixelSize, (int)virtualpixelSize), color);
+                }
+            }
+        }
+
+        public static void DrawFrame(Texture2D frame, Camera camera, SpriteBatch spriteBatch, Point screenRes, Texture2D whiteTexture, Rectangle source, Color[] colorData)
+        {
+            for (int i = 0; i < source.Width; i++)
+            {
+                for (int j = 0; j < source.Height; j++)
+                {
+                    Color c = GetTextureColor(colorData, frame, i * (frame.Width / source.Width), j * (frame.Height / source.Height), source);
+
+                    int br = (c.R + c.G + c.B) / 3;
+                    br *= 19;
+                    br /= 255;
+
+                    int[,] patern = PixelPatern(br);
+                    RenderPixelPatern(screenRes, camera, spriteBatch, whiteTexture, i, j, patern);
                 }
             }
         }
