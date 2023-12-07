@@ -16,6 +16,8 @@ namespace Raycaster
         public float[] DepthBuffer;
 
         public float[,] EntityBuffer;
+        public bool[,] RenderedBuffer;
+
 
         public bool Render;
 
@@ -28,16 +30,23 @@ namespace Raycaster
 
         public float RollAngle = 0;
 
+        public bool GrayScale = false;
+
         public Vector2 Position { get; set; } = Vector2.One*1.5f;
         public Vector2 Right => new Vector2(MathF.Cos(Angle+MathF.PI/2), MathF.Sin(Angle+MathF.PI / 2));
 
         public Vector2 Forward => new Vector2(MathF.Cos(Angle), MathF.Sin(Angle));
-        public Camera(int width, int height)
+
+        public Texture2D Texture;
+        private Color[] Colors;
+        public Camera(int width, int height, GraphicsDevice graphicsDevice)
         {
             Width = width;
             Height = height;
             DepthBuffer = new float[width];
             EntityBuffer = new float[width,height];
+            RenderedBuffer = new bool[width, height];
+
             RenderLoadBuffer = new float[width,height];
             RenderWorldBuffer = new bool[width,height];
 
@@ -49,6 +58,44 @@ namespace Raycaster
                     RenderWorldBuffer[i, j] = true;
                 }
             }
+            Colors = new Color[width*3 * height*3];
+            Texture = new Texture2D(graphicsDevice, Width*3, Height*3);
+        }
+
+        public void SetColor(bool color, int x, int y)
+        {
+            Colors[(x) + (y) * Texture.Width] = color ? Color.Black : Color.White;
+
+        }
+        public void SetColor(Color color, int x, int y, int size = 1)
+        {
+            for (int i = 0; i < size; i++)
+            {
+                for (int j = 0; j < size; j++)
+                {
+                    Colors[(x + i) + (y + j) * Texture.Width] = color;
+                }
+            }
+        }
+
+        public void Clear()
+        {
+            for (int i = 0; i < Colors.Length; i++)
+            {
+                Colors[i] = Color.Black;
+            }
+            RenderedBuffer = new bool[Width, Height];
+        }
+
+        public void Draw(SpriteBatch spriteBatch, Point ScreenRes)
+        {
+            Texture.SetData(Colors);
+            spriteBatch.Draw(Texture, new Rectangle(0,0, ScreenRes.X, ScreenRes.Y), Color.White);
+            for (int i = 0;i < Colors.Length;i++)
+            {
+                Colors[i] = Color.Black;
+            }
+            RenderedBuffer = new bool[Width, Height];
         }
 
         public void Update(float deltaTime)

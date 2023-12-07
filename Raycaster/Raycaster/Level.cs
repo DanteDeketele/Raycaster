@@ -47,10 +47,10 @@ namespace Raycaster
             return text;
         }
 
-        public void DrawEntities(Point screenRes,Camera camera, SpriteBatch spriteBatch, Texture2D whiteTexture)
+        public void DrawEntities(Point screenRes,Camera camera, Color[] colorData)
         {
             foreach (Entity entity in entities) {
-                RaycastComputer.DrawEntity(screenRes,camera, entity, spriteBatch, whiteTexture, entity.DistanceToCamera < 4);
+                RaycastComputer.DrawEntity(screenRes,camera, entity, colorData, entity.DistanceToCamera < 4);
             }
         }
     }

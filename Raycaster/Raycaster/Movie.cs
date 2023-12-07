@@ -16,6 +16,10 @@ namespace Raycaster.Movies
         private int currentFrame;
         private float timePerFrame;
         private float frameTimer;
+        private float totalAnimationTime; // Total time for the entire animation
+        private float elapsedTime; // Elapsed time since the start of the animation
+
+        public bool IsDone = false;
 
         public Color[] ColorData;
 
@@ -29,12 +33,14 @@ namespace Raycaster.Movies
             frameHeight = 180;
             this.columns = columns;
             rows = (int)Math.Ceiling((float)totalFrames / columns);
-            timePerFrame = 1f / 24f; // Fixed framerate of 24 fps
+            timePerFrame = 1f / 16f; // Fixed framerate of 24 fps
             currentFrame = 0;
             frameTimer = 0;
 
             ColorData = new Color[textureSheet.Width * textureSheet.Height];
             textureSheet.GetData(ColorData);
+
+            totalAnimationTime = timePerFrame * totalFrames;
         }
 
         private void LoadTextureSheet(string textureSheetPath, GraphicsDevice graphicsDevice)
@@ -46,13 +52,18 @@ namespace Raycaster.Movies
 
         public void Update(float deltatime)
         {
-            frameTimer += deltatime;
+            if (IsDone) return;
+            elapsedTime += deltatime;
 
-            if (frameTimer >= timePerFrame)
+            // Calculate current frame based on elapsed time and total animation time
+            float normalizedTime = elapsedTime / totalAnimationTime;
+            currentFrame = (int)Math.Floor(normalizedTime * totalFrames);
+            if (currentFrame >= totalFrames )
             {
-                frameTimer = 0;
-                currentFrame = (currentFrame + 1) % totalFrames;
+                IsDone = true;
+                currentFrame = totalFrames-1;
             }
+
         }
 
         public void Draw(Raycaster.Camera camera, SpriteBatch spriteBatch, Texture2D whiteTexture, Point screenRes)
@@ -64,8 +75,8 @@ namespace Raycaster.Movies
             int sourceY = row * frameHeight;
 
             Rectangle sourceRectangle = new Rectangle(sourceX, sourceY,  frameWidth, frameHeight);
-
-                RaycastComputer.DrawFrame(textureSheet, camera, spriteBatch, screenRes, whiteTexture, sourceRectangle, ColorData);
+            //spriteBatch.Draw(textureSheet, new Rectangle(0, 0, screenRes.X, screenRes.Y), sourceRectangle, Color.White);
+                RaycastComputer.DrawFrame(textureSheet, camera, screenRes, sourceRectangle, ColorData);
             
         }
 

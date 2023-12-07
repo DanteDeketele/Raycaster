@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿using FFmpeg.AutoGen;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Diagnostics;
@@ -7,7 +8,7 @@ namespace Raycaster
 {
     internal static class RaycastComputer
     {
-        public static void DrawScreen(Point screenRes,Camera camera, Level level, SpriteBatch spriteBatch, Texture2D textureSheet, Texture2D whiteTexture, Texture2D glowTexture, float interactibleFase)
+        public static void DrawScreen(Point screenRes,Camera camera, Level level, Texture2D textureSheet, Texture2D glowTexture, float interactibleFase, Color[] colorData, Color[] colorDataGlow)
         {
             int width = camera.Width;
             int height = camera.Height;
@@ -17,12 +18,6 @@ namespace Raycaster
             Vector2 position = camera.Position;
 
             Vector2 playerDir = camera.Forward;
-
-            Color[] colorData = new Color[textureSheet.Width * textureSheet.Height];
-            textureSheet.GetData(colorData);
-
-            Color[] colorGlowData = new Color[glowTexture.Width * glowTexture.Height];
-            glowTexture.GetData(colorGlowData);
 
             for (int i = 0; i < width; i++)
             {
@@ -123,6 +118,7 @@ namespace Raycaster
 
                 for (int y = drawStart; y <= drawEnd; y++)
                 {
+                    camera.RenderedBuffer[i, y] = true;
                     int texY = (int)((y - drawStart - MathF.Min(0, offset / 2)) * (float)textureSheet.Height / projectedHeight);
                     int texYglow = (int)((y - drawStart - MathF.Min(0, offset / 2)) * (float)glowTexture.Height / projectedHeight);
 
@@ -131,7 +127,7 @@ namespace Raycaster
                     brightness -= side * 2;
 
 
-                    brightness -= (int)(perpWallDist*1.5f);
+                    brightness -= (int)(perpWallDist*0.5f);
 
                     if (brightness < 0)
                         brightness = 0;
@@ -140,9 +136,10 @@ namespace Raycaster
 
                     Color c = GetTextureColor(colorData, textureSheet, texX, texY, GetWallTextureRect(map[mapX, mapY]));
 
+
                     if (map[mapX, mapY] == 100)
                     {
-                        Color cGlow = GetGlowTextureColor(colorGlowData, glowTexture, texXglow, texYglow, interactibleFase);
+                        Color cGlow = GetGlowTextureColor(colorDataGlow, glowTexture, texXglow, texYglow, interactibleFase);
 
                         if (cGlow.Equals(Color.White))
                         {
@@ -150,23 +147,75 @@ namespace Raycaster
                         }
                     }
 
-                    int br = (c.R + c.G + c.B) / 3;
+                    
+
+                    int br = (int)(0.21 * c.R + 0.69 * c.G + 0.15 * c.B);
                     br = 255 - br;
-                    br *= 12;
+                    br *= 19;
                     br /= 255;
 
                     brightness -= br;
 
-                    int[,] patern = PixelPatern(brightness);
-                    RenderPixelPatern(screenRes, camera, spriteBatch, whiteTexture, i, y + (int)((i - camera.Width/2)*camera.RollAngle*0.02f), patern);
+                    int[,] patern = PixelPattern(brightness);
+                    
+                    if (map[mapX, mapY] == 66)
+                    {
+                        patern = PixelPattern(18);
+                    }
+
+                    RenderPixelPattern(screenRes, camera, i, y + (int)((i - camera.Width/2)*camera.RollAngle*0.02f), patern, brightness);
                     //float virtualpixelSize = (screenRes.X / camera.Width);
                     //Vector2 distortion = screenRes.ToVector2() - new Vector2(camera.Width * (int)(virtualpixelSize), camera.Height * (int)(virtualpixelSize));
-                    //spriteBatch.Draw(whiteTexture, new Rectangle((int)(i * virtualpixelSize - distortion.X / 2), (int)(y * virtualpixelSize - distortion.Y / 2), (int)virtualpixelSize, (int)virtualpixelSize), c);
+                    //spriteBatch.Draw(whiteTexture, new Rectangle(i*8, y*8 + (int)((i - camera.Width/2)*3*camera.RollAngle*0.02f), 8, 8), c);
+                }
+
+                for (int y = drawEnd + 1; y < height; y++)
+                {
+                    camera.RenderedBuffer[i, y] = true;
+                    // Calculate the ray direction for the floor
+                    Vector2 floorRayDir = new Vector2(
+                        playerDir.X + camera.Right.X * (2 * i / (float)width - 1),
+                        playerDir.Y + camera.Right.Y * (2 * i / (float)width - 1));
+
+                    // Calculate the current distance to the floor
+                    double currentDist = height / (2.0 * y - height);
+
+                    // Calculate the position of the floor intersection
+                    Vector2 floorIntersection = position + (float)currentDist * floorRayDir;
+
+                    // Get the texture coordinates for the floor
+                    int floorTexX = (int)(floorIntersection.X * textureSheet.Width) % textureSheet.Width;
+                    int floorTexY = (int)(floorIntersection.Y * textureSheet.Height) % textureSheet.Height;
+
+                    // Render the floor pixel
+                    Color floorColor = GetTextureColor(colorData, textureSheet, floorTexX, floorTexY, GetWallTextureRect(3)); // Adjust this based on your floor texture
+
+                    int brightness = 19;
+
+                    int br = (int)(0.21 * floorColor.R + 0.69 * floorColor.G + 0.15 * floorColor.B);
+                    br = 255 - br;
+                    br *= 19;
+                    br /= 255;
+
+                    brightness -= br;
+
+                    int[,] patern = PixelPattern(brightness);
+
+                    RenderPixelPattern(screenRes, camera, i, y + (int)((i - camera.Width / 2) * camera.RollAngle * 0.02f), patern, brightness);
                 }
             }
         }
 
-        private static void RenderPixelPatern(Point screenRes, Camera camera, SpriteBatch spriteBatch, Texture2D whiteTexture, int x, int y, int[,] patern)
+        public static Point ActualUsedRegion(Camera camera, Point screenRes)
+        {
+            float virtualpixelSize = (screenRes.X / camera.Width) / 3 + 1;
+
+            float x = screenRes.X - virtualpixelSize * camera.Width;
+            float y = screenRes.Y - virtualpixelSize * camera.Height;
+            return new Point((int)(x),(int)( y));
+        }
+
+        private static void RenderPixelPattern(Point screenRes, Camera camera, int x, int y, int[,] patern, int brightness)
         {
             if (x < 0 || x >= camera.Width || y < 0 || y >= camera.Height)
                 return;
@@ -177,9 +226,9 @@ namespace Raycaster
             if (!camera.RenderWorldBuffer[x, y])
                 return;
 
-            float virtualpixelSize = (screenRes.X / camera.Width)/3 + 1;
+            float virtualpixelSize = (screenRes.X / camera.Width) / 3 + 1;
 
-            Vector2 distortion = screenRes.ToVector2() - new Vector2(camera.Width * (int)(virtualpixelSize*3), camera.Height * (int)(virtualpixelSize*3));
+            Vector2 distortion = screenRes.ToVector2() - new Vector2(camera.Width * (int)(virtualpixelSize * 3), camera.Height * (int)(virtualpixelSize * 3));
 
             distortion = -distortion;
 
@@ -187,35 +236,92 @@ namespace Raycaster
             {
                 //virtualpixelSize++;
             }
-
-            for (int x1 = 0; x1 < 3; x1++)
+            
+            if (camera.GrayScale)
             {
-                for (int y1 = 0; y1 < 3; y1++)
+                int br = brightness * 255/19;
+                camera.SetColor(new Color(br,br,br), x * 3, y * 3, 3);
+            }
+            else
+            {
+                for (int x1 = 0; x1 < 3; x1++)
                 {
-                    Color color = patern[x1, y1] == 1 ? Color.White : Color.Black;
+                    for (int y1 = 0; y1 < 3; y1++)
+                    {
+                        camera.SetColor(patern[x1, y1] != 1, x1 + x * 3, y1 + y * 3);
+                        
+                        //Color color = patern[x1, y1] == 1 ? Color.White : Color.Black;
 
-                    spriteBatch.Draw(whiteTexture, new Rectangle((int)(x * virtualpixelSize * 3 + x1 * virtualpixelSize - distortion.X/2), (int)(y * virtualpixelSize * 3 + y1 * virtualpixelSize - distortion.Y / 2), (int)virtualpixelSize, (int)virtualpixelSize), color);
+                        //spriteBatch.Draw(whiteTexture, new Rectangle((int)(x * virtualpixelSize * 3 + x1 * virtualpixelSize - distortion.X/2), (int)(y * virtualpixelSize * 3 + y1 * virtualpixelSize - distortion.Y / 2), (int)virtualpixelSize, (int)virtualpixelSize), color);
+                    }
                 }
             }
         }
 
-        public static void DrawFrame(Texture2D frame, Camera camera, SpriteBatch spriteBatch, Point screenRes, Texture2D whiteTexture, Rectangle source, Color[] colorData)
+        public static void DrawFrame(Texture2D frame, Camera camera, Point screenRes, Rectangle source, Color[] colorData, bool scroll = false)
         {
+            Random rand = new Random(0);
+
             for (int i = 0; i < source.Width; i++)
             {
                 for (int j = 0; j < source.Height; j++)
                 {
-                    Color c = GetTextureColor(colorData, frame, i * (frame.Width / source.Width), j * (frame.Height / source.Height), source);
+                    
 
-                    int br = (c.R + c.G + c.B) / 3;
+                    int offset = i;
+                    if (scroll)
+                    {
+                        offset += (int)(camera.Angle / (2 * MathF.PI) * source.Width * MathF.PI);
+                        if (camera.RenderedBuffer[i, j])
+                            continue;
+                    }
+
+                    if (offset >= source.Width)
+                    {
+                        offset -= source.Width;
+                    }
+                    if (offset < 0)
+                    {
+                        offset += source.Width;
+                    }
+                    if (offset >= source.Width)
+                    {
+                        offset -= source.Width;
+                    }
+                    if (offset < 0)
+                    {
+                        offset += source.Width;
+                    }
+                    if (offset >= source.Width)
+                    {
+                        offset -= source.Width;
+                    }
+                    if (offset < 0)
+                    {
+                        offset += source.Width;
+                    }
+
+                    Color c = GetTextureColor(colorData, frame, (offset) * (frame.Width / source.Width), j * (frame.Height / source.Height), source);
+
+                    int br = (int)(0.21 * c.R + 0.72 * c.G + 0.07 * c.B);
+
                     br *= 19;
+                    float fade = br % 255;
                     br /= 255;
 
-                    int[,] patern = PixelPatern(br);
-                    RenderPixelPatern(screenRes, camera, spriteBatch, whiteTexture, i, j, patern);
+                    
+
+                    if (rand.Next(0, 255) < fade)
+                    {
+                        br++;
+                    }
+
+                    int[,] pattern = PixelPattern(br);
+                    RenderPixelPattern(screenRes, camera, i, j, pattern, br);
                 }
             }
         }
+
 
 
         private static Color GetTextureColor(Color[] data, Texture2D texture, int x, int y, Rectangle source)
@@ -261,7 +367,7 @@ namespace Raycaster
             return new Rectangle(sourceX, sourceY, tileWidth, tileHeight);
         }
 
-        public static void DrawEntity(Point screenRes, Camera camera, Entity entity, SpriteBatch spriteBatch, Texture2D whiteTexture, bool outlined = false)
+        public static void DrawEntity(Point screenRes, Camera camera, Entity entity, Color[] colorData, bool outlined = false)
         {
             Color transparent = new Color(155, 0, 139);
 
@@ -275,8 +381,7 @@ namespace Raycaster
                 angleDifference -= 2 * MathF.PI;
             }
 
-            Color[] colorData = new Color[entity.Texture.Width * entity.Texture.Height];
-            entity.Texture.GetData(colorData);
+            
 
             Vector2 cameraToEntity = entity.Position - camera.Position;
 
@@ -331,6 +436,7 @@ namespace Raycaster
 
                 for (int j = 0; j < width; j++)
                 {
+                    
                     int yPos = j + camera.Height/2 - width / 2;
                     if (entity.IsBullet)
                     {
@@ -357,15 +463,17 @@ namespace Raycaster
                     if (c == transparent)
                         continue;
 
-                    int br = (c.R + c.G + c.B) / 3;
+                    int br = (int)(0.21 * c.R + 0.69 * c.G + 0.15 * c.B);
+
                     br = 255 - br;
                     br *= 17;
                     br /= 255;
 
                     brightness -= br;
 
-                    int[,] patern = PixelPatern(brightness);
-                    RenderPixelPatern(screenRes, camera, spriteBatch, whiteTexture, xPos, yPos + (int)((xPos - camera.Width / 2) * camera.RollAngle * 0.02f), patern);
+                    int[,] patern = PixelPattern(brightness);
+                    RenderPixelPattern(screenRes, camera, xPos, yPos + (int)((xPos - camera.Width / 2) * camera.RollAngle * 0.02f), patern, brightness);
+                    //camera.RenderedBuffer[xPos, yPos + (int)((xPos - camera.Width / 2) * camera.RollAngle * 0.02f)] = true;
 
                     if (outlined && !entity.IsBullet && (yPos + (int)((xPos - camera.Width / 2) * camera.RollAngle * 0.02f)) > 0 && (yPos + (int)((xPos - camera.Width / 2) * camera.RollAngle * 0.02f)) < camera.Height-1)
                     {
@@ -375,7 +483,7 @@ namespace Raycaster
             }
         }
 
-        public static void DrawEntityOutlines(Point screenRes, Camera camera, SpriteBatch spriteBatch, Texture2D whiteTexture)
+        public static void DrawEntityOutlines(Point screenRes, Camera camera)
         {
             for (int i = 1; i < camera.Width-1; i++)
             {
@@ -392,15 +500,15 @@ namespace Raycaster
                             camera.EntityBuffer[i - 1, j + 1] != 0 ||
                             camera.EntityBuffer[i - 1, j - 1] != 0)
                         {
-                            int[,] patern = PixelPatern(19);
-                            RenderPixelPatern(screenRes, camera, spriteBatch, whiteTexture, i, j, patern);
+                            int[,] patern = PixelPattern(19);
+                            RenderPixelPattern(screenRes, camera, i, j, patern, 19);
                         }
                     }
                 }
             }
         }
 
-        public static void DrawGunOutlines(Point screenRes, Camera camera, SpriteBatch spriteBatch, Texture2D whiteTexture)
+        public static void DrawGunOutlines(Point screenRes, Camera camera)
         {
             for (int i = 1; i < camera.Width - 1; i++)
             {
@@ -417,22 +525,84 @@ namespace Raycaster
                             !camera.RenderWorldBuffer[i - 1, j + 1] ||
                             !camera.RenderWorldBuffer[i - 1, j - 1] )
                         {
-                            int[,] patern = PixelPatern(19);
-                            RenderPixelPatern(screenRes, camera, spriteBatch, whiteTexture, i, j, patern);
+                            int[,] patern = PixelPattern(19);
+                            RenderPixelPattern(screenRes, camera, i, j, patern,19);
                         }
                     }
                 }
             }
+
+            for (int i = 1; i < camera.Width - 1; i++)
+            {
+                int j = 0;
+                if (camera.RenderWorldBuffer[i, j])
+                {
+                    if (!camera.RenderWorldBuffer[i + 1, j] ||
+                        !camera.RenderWorldBuffer[i + 1, j + 1] ||
+                        !camera.RenderWorldBuffer[i, j + 1] ||
+                        !camera.RenderWorldBuffer[i - 1, j] ||
+                        !camera.RenderWorldBuffer[i - 1, j + 1])
+                    {
+                        int[,] patern = PixelPattern(19);
+                        RenderPixelPattern(screenRes, camera,  i, j, patern,19);
+                    }
+                }
+
+                j = camera.Height-1;
+                if (camera.RenderWorldBuffer[i, j])
+                {
+                    if (!camera.RenderWorldBuffer[i + 1, j] ||
+                        !camera.RenderWorldBuffer[i + 1, j - 1] ||
+                        !camera.RenderWorldBuffer[i, j - 1] ||
+                        !camera.RenderWorldBuffer[i - 1, j] ||
+                        !camera.RenderWorldBuffer[i - 1, j - 1])
+                    {
+                        int[,] patern = PixelPattern(19);
+                        RenderPixelPattern(screenRes, camera, i, j, patern,19);
+                    }
+                }
+            }
+
+            for (int j = 1; j < camera.Height - 1; j++)
+            {
+                int i = 0;
+                if (camera.RenderWorldBuffer[i, j])
+                {
+                    if (!camera.RenderWorldBuffer[i + 1, j] ||
+                        !camera.RenderWorldBuffer[i + 1, j + 1] ||
+                        !camera.RenderWorldBuffer[i + 1, j - 1] ||
+                        !camera.RenderWorldBuffer[i, j + 1] ||
+                        !camera.RenderWorldBuffer[i, j - 1])
+                    {
+                        int[,] patern = PixelPattern(19);
+                        RenderPixelPattern(screenRes, camera, i, j, patern, 19);
+                    }
+                    i = camera.Width - 1;
+                    if (camera.RenderWorldBuffer[i, j])
+                    {
+                        if (!camera.RenderWorldBuffer[i - 1, j] ||
+                            !camera.RenderWorldBuffer[i - 1, j + 1] ||
+                            !camera.RenderWorldBuffer[i - 1, j - 1] ||
+                            !camera.RenderWorldBuffer[i, j + 1] ||
+                            !camera.RenderWorldBuffer[i, j - 1])
+                        {
+                            int[,] patern = PixelPattern(19);
+                            RenderPixelPattern(screenRes, camera, i, j, patern, 19);
+                        }
+                    }
+                }
+            }
+
+            
         }
 
-        public static void DrawGun(Point screenRes, Camera camera, int gun, int frame, SpriteBatch spriteBatch, Texture2D texture, Texture2D whiteTexture)
+        public static void DrawGun(Point screenRes, Camera camera, int gun, int frame, Texture2D texture, Color[] colorData)
         {
             Color transparent = new Color(152, 0, 136);
 
             int size = camera.Height / 2;
 
-            Color[] colorData = new Color[texture.Width * texture.Height];
-            texture.GetData(colorData);
+            
 
             for (int x = 0; x < size; x++)
             {
@@ -445,16 +615,17 @@ namespace Raycaster
                     if (c == transparent)
                         continue;
 
-                    int br = (c.R + c.G + c.B) / 3;
+                    int br = (int)(0.21 * c.R + 0.69 * c.G + 0.15 * c.B);
+
                     br = 255 - br;
                     br *= 19;
                     br /= 255;
 
                     brightness -= br;
 
-                    int[,] patern = PixelPatern(brightness);
-                    RenderPixelPatern(screenRes, camera, spriteBatch, whiteTexture, x + camera.Width/2 - (int)(size*0.5f), y+camera.Height-size-10, patern);
-                    camera.RenderWorldBuffer[x + camera.Width / 2 -(int)(size * 0.5f), y+camera.Height - size - 10] = false;
+                    int[,] patern = PixelPattern(brightness);
+                    RenderPixelPattern(screenRes, camera, x + camera.Width/2 - (int)(size*0.5f), y+camera.Height-size, patern, brightness);
+                    camera.RenderWorldBuffer[x + camera.Width / 2 -(int)(size * 0.5f), y+camera.Height - size] = false;
                 }
             }
         }
@@ -527,8 +698,13 @@ namespace Raycaster
             spriteBatch.Draw(textureSheet, playerView2Dest, Color.Pink);
         }
 
-        private static int[,] PixelPatern(int type)
+        private static int[,] PixelPattern(int type)
         {
+            if (type < 0)
+                type = 0;
+            if (type > 19)
+                type = 19;
+
             switch (type)
             {
                 case 0:
@@ -539,13 +715,13 @@ namespace Raycaster
                     };
                 case 1:
                     return new int[,] {
-                        { 0, 0, 0},
+                        { 1, 0, 0},
                         { 0, 0, 0},
                         { 0, 0, 0}
                     };
                 case 2:
                     return new int[,] {
-                        { 0, 0, 0},
+                        { 1, 0, 0},
                         { 0, 1, 0},
                         { 0, 0, 0}
                     };
@@ -553,7 +729,7 @@ namespace Raycaster
                     return new int[,] {
                         { 1, 0, 0},
                         { 0, 0, 0},
-                        { 0, 0, 0}
+                        { 0, 0, 1}
                     };
                 case 4:
                     return new int[,] {
@@ -642,7 +818,7 @@ namespace Raycaster
                 case 18:
                     return new int[,] {
                         { 1, 1, 1},
-                        { 1, 1, 1},
+                        { 1, 1, 0},
                         { 1, 1, 1}
                     };
                 case 19:
@@ -659,7 +835,7 @@ namespace Raycaster
             };
         }
 
-        public static void DrawFont(string text, Point topLeft, Point screenRes, Camera cam, Texture2D whiteTexture, SpriteBatch spriteBatch)
+        public static void DrawFont(string text, Point topLeft, Point screenRes, Camera cam)
         {
             if (string.IsNullOrEmpty(text)) return;
 
@@ -674,9 +850,12 @@ namespace Raycaster
                 {
                     for (int y = 0; y < 8; y++)
                     {
-                        int[,] patern = PixelPatern(fontPatern[y,x]*19);
-
-                        RenderPixelPatern(screenRes, cam, spriteBatch, whiteTexture, topLeft.X + x + i * 8, topLeft.Y + y, patern);
+                        if (fontPatern[y, x] == 0)
+                            continue;
+                        int[,] patern = PixelPattern(19-fontPatern[y,x]*19);
+                        
+                        RenderPixelPattern(screenRes, cam, topLeft.X + x + i * 8, topLeft.Y + y, patern, 19 - fontPatern[y, x] * 19);
+                        cam.RenderWorldBuffer[topLeft.X + x + i * 8, topLeft.Y + y] = false;
                     }
                 }
             }
@@ -804,6 +983,114 @@ namespace Raycaster
                         { 0,0,0,0,0,1,1,0},
                         { 0,0,0,0,1,1,0,0},
                         { 0,0,1,1,1,0,0,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+                case '.':
+                    return new int[,]
+                    {
+                        { 0,0,0,0,0,0,0,0},
+                        { 0,0,0,0,0,0,0,0},
+                        { 0,0,0,0,0,0,0,0},
+                        { 0,0,0,0,0,0,0,0},
+                        { 0,0,0,0,0,0,0,0},
+                        { 0,1,1,0,0,0,0,0},
+                        { 0,1,1,0,0,0,0,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+                case 'A':
+                    return new int[,]
+                    {
+                        { 0,0,1,1,1,1,0,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,1,1,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+                case 'P':
+                    return new int[,]
+                    {
+                        { 0,1,1,1,1,1,0,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,1,1,1,0,0},
+                        { 0,1,1,0,0,0,0,0},
+                        { 0,1,1,0,0,0,0,0},
+                        { 0,1,1,0,0,0,0,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+                case 'L':
+                    return new int[,]
+                    {
+                        { 0,1,1,0,0,0,0,0},
+                        { 0,1,1,0,0,0,0,0},
+                        { 0,1,1,0,0,0,0,0},
+                        { 0,1,1,0,0,0,0,0},
+                        { 0,1,1,0,0,0,0,0},
+                        { 0,1,1,1,1,1,1,0},
+                        { 0,1,1,1,1,1,1,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+                case 'I':
+                    return new int[,]
+                    {
+                        { 0,0,1,1,1,1,0,0},
+                        { 0,0,0,1,1,0,0,0},
+                        { 0,0,0,1,1,0,0,0},
+                        { 0,0,0,1,1,0,0,0},
+                        { 0,0,0,1,1,0,0,0},
+                        { 0,0,0,1,1,0,0,0},
+                        { 0,0,1,1,1,1,0,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+                case 'O':
+                    return new int[,]
+                    {
+                        { 0,0,1,1,1,1,0,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,0,1,1,1,1,0,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+                case 'S':
+                    return new int[,]
+                    {
+                        { 0,0,1,1,1,1,1,0},
+                        { 0,1,1,0,0,0,0,0},
+                        { 0,1,1,0,0,0,0,0},
+                        { 0,0,1,1,1,1,0,0},
+                        { 0,0,0,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,0,1,1,1,1,0,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+                case 'T':
+                    return new int[,]
+                    {
+                        { 0,1,1,1,1,1,1,0},
+                        { 0,1,1,1,1,1,1,0},
+                        { 0,0,0,1,1,0,0,0},
+                        { 0,0,0,1,1,0,0,0},
+                        { 0,0,0,1,1,0,0,0},
+                        { 0,0,0,1,1,0,0,0},
+                        { 0,0,0,1,1,0,0,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+                case 'K':
+                    return new int[,]
+                    {
+                        { 0,1,1,0,0,0,0,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,1,1,1,0,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
                         { 0,0,0,0,0,0,0,0}
                     };
                 default:
