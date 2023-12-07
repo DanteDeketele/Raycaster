@@ -90,8 +90,8 @@ namespace Raycaster
             // Set the game to run in fullscreen mode
             //_graphics.IsFullScreen = true;
 
-            //_graphics.SynchronizeWithVerticalRetrace = false;
-            //IsFixedTimeStep = false;
+            _graphics.SynchronizeWithVerticalRetrace = false;
+            IsFixedTimeStep = false;
 
             // Apply the changes
             _graphics.ApplyChanges();
@@ -381,6 +381,7 @@ namespace Raycaster
             _camera.Render = !Keyboard.GetState().IsKeyDown(Keys.R);
             _camera.Update(deltaTime);
 
+
             base.Update(gameTime);
         }
 
@@ -412,43 +413,15 @@ namespace Raycaster
 
             if (!_paused && !_loadMovieQue)
             {
-
-                if (_shootAnimation)
-                {
-                    _shootTime += deltaTime * 20f;
-
-                    _shootFrame = (int)_shootTime;
-                    if (_shootTime >= 5)
-                    {
-                        _shootAnimation = false;
-                        _shootTime = 0;
-                        _shootFrame = 0;
-                    }
-                }
-
-                
-
-                RaycastComputer.DrawGun(_screenRes, _camera, _gunIndex, _shootFrame, _gunTexture);
-
-                RaycastComputer.DrawScreen(_screenRes, _camera, _levels[_currentLevelId],  _textureSheet, _glowTexture, _blinkFase);
-                RaycastComputer.DrawFrame(_skyTexture, _camera, _screenRes, new Rectangle(0, 0, _camera.Width, _camera.Height), true);
-                _levels[_currentLevelId].DrawEntities(_screenRes, _camera);
-
-                RaycastComputer.DrawEntityOutlines(_screenRes, _camera);
-
-
-                /*if (_enableTopView)
-                    RaycastComputer.DrawTopView(_camera, _levels[_currentLevelId], _spriteBatch);*/
-
-                
+                DrawAll(deltaTime);
 
             }
-           
-            
+
+
 
             _fps.Add(deltaTime);
             _fpsTimer += deltaTime;
-            if (_fpsTimer > 1 && !_loadMovieQue)
+            if (_fpsTimer > 0.25f && !_loadMovieQue)
             {
                 _fpsTimer = 0;
                 _fpsCounter = 0;
@@ -490,6 +463,37 @@ namespace Raycaster
             _spriteBatch.End();
 
             base.Draw(gameTime);
+        }
+
+        private void DrawAll(float deltaTime)
+        {
+            if (_shootAnimation)
+            {
+                _shootTime += deltaTime * 20f;
+
+                _shootFrame = (int)_shootTime;
+                if (_shootTime >= 5)
+                {
+                    _shootAnimation = false;
+                    _shootTime = 0;
+                    _shootFrame = 0;
+                }
+            }
+
+
+
+            RaycastComputer.DrawGun(_screenRes, _camera, _gunIndex, _shootFrame, _gunTexture);
+
+            RaycastComputer.DrawScreen(_screenRes, _camera, _levels[_currentLevelId], _textureSheet, _glowTexture, _blinkFase);
+            RaycastComputer.DrawFrame(_skyTexture, _camera, _screenRes, new Rectangle(0, 0, _camera.Width, _camera.Height), true);
+            _levels[_currentLevelId].DrawEntities(_screenRes, _camera);
+
+            RaycastComputer.DrawEntityOutlines(_screenRes, _camera);
+
+
+            /*if (_enableTopView)
+                RaycastComputer.DrawTopView(_camera, _levels[_currentLevelId], _spriteBatch);*/
+
         }
     }
 }

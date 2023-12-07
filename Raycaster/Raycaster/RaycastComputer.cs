@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Graphics;
 using NAudio.MediaFoundation;
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace Raycaster
 {
@@ -20,7 +21,8 @@ namespace Raycaster
 
             Vector2 playerDir = camera.Forward;
 
-            for (int i = 0; i < width; i++)
+            // Use Parallel.For to parallelize the outer loop
+            Parallel.For(0, width, i =>
             {
                 float cameraX = 2 * i / (float)width - 1;
                 Vector2 rayDir = new Vector2(
@@ -81,9 +83,10 @@ namespace Raycaster
                     if (map[mapX, mapY] > 0)
                         hit = true;
                 }
+                
 
                 if (!hit)
-                    continue;
+                    return;
 
                 if (side == 0)
                     perpWallDist = (mapX - position.X + (1 - stepX) / 2) / rayDir.X;
@@ -94,7 +97,7 @@ namespace Raycaster
 
                 int projectedHeight = (int)((height) / perpWallDist);
 
-                int drawStart = Math.Max(0, (height - projectedHeight) / 2 );
+                int drawStart = Math.Max(0, (height - projectedHeight) / 2);
                 int drawEnd = Math.Min(height - 1, (height + projectedHeight) / 2);
 
                 int offset = height - projectedHeight;
@@ -127,7 +130,7 @@ namespace Raycaster
                     brightness -= side * 2;
 
 
-                    brightness -= (int)(perpWallDist*0.5f);
+                    brightness -= (int)(perpWallDist * 0.5f);
 
                     if (brightness < 0)
                         brightness = 0;
@@ -143,7 +146,7 @@ namespace Raycaster
 
                         if (cGlow > 5)
                         {
-                            c +=2;
+                            c += 2;
                         }
                     }
 
@@ -152,7 +155,7 @@ namespace Raycaster
                     brightness = c;
 
                     int[,] patern = PixelPattern(brightness);
-                    
+
                     if (map[mapX, mapY] == 66)
                     {
                         patern = PixelPattern(18);
@@ -167,7 +170,7 @@ namespace Raycaster
                     {
                         camera.RenderedBuffer[i, y1] = true;
                     }
-                    
+
                     //float virtualpixelSize = (screenRes.X / camera.Width);
                     //Vector2 distortion = screenRes.ToVector2() - new Vector2(camera.Width * (int)(virtualpixelSize), camera.Height * (int)(virtualpixelSize));
                     //spriteBatch.Draw(whiteTexture, new Rectangle(i*8, y*8 + (int)((i - camera.Width/2)*3*camera.RollAngle*0.02f), 8, 8), c);
@@ -206,7 +209,7 @@ namespace Raycaster
                     }
                     RenderPixelPattern(screenRes, camera, i, y1, patern, brightness);
                 }
-            }
+            });
         }
 
         public static Point ActualUsedRegion(Camera camera, Point screenRes)
@@ -481,9 +484,9 @@ namespace Raycaster
 
         public static void DrawEntityOutlines(Point screenRes, Camera camera)
         {
-            for (int i = 1; i < camera.Width-1; i++)
+            Parallel.For(1, camera.Width - 1, i =>
             {
-                for (int j = 1; j < camera.Height-1; j++)
+                for (int j = 1; j < camera.Height - 1; j++)
                 {
                     if (camera.EntityBuffer[i, j] == 0)
                     {
@@ -501,32 +504,34 @@ namespace Raycaster
                         }
                     }
                 }
-            }
+            });
         }
 
         public static void DrawGunOutlines(Point screenRes, Camera camera)
         {
-            for (int i = 1; i < camera.Width - 1; i++)
+            Parallel.For(1, camera.Width - 1, i =>
             {
                 for (int j = 1; j < camera.Height - 1; j++)
                 {
                     if (camera.RenderWorldBuffer[i, j])
                     {
                         if (!camera.RenderWorldBuffer[i + 1, j] ||
-                            !camera.RenderWorldBuffer[i + 1, j + 1]||
+                            !camera.RenderWorldBuffer[i + 1, j + 1] ||
                             !camera.RenderWorldBuffer[i + 1, j - 1] ||
-                            !camera.RenderWorldBuffer[i, j + 1]||
+                            !camera.RenderWorldBuffer[i, j + 1] ||
                             !camera.RenderWorldBuffer[i, j - 1] ||
-                            !camera.RenderWorldBuffer[i - 1, j]  ||
+                            !camera.RenderWorldBuffer[i - 1, j] ||
                             !camera.RenderWorldBuffer[i - 1, j + 1] ||
-                            !camera.RenderWorldBuffer[i - 1, j - 1] )
+                            !camera.RenderWorldBuffer[i - 1, j - 1])
                         {
                             int[,] patern = PixelPattern(19);
-                            RenderPixelPattern(screenRes, camera, i, j, patern,19);
+                            RenderPixelPattern(screenRes, camera, i, j, patern, 19);
                         }
                     }
                 }
-            }
+
+            });
+        
 
             for (int i = 1; i < camera.Width - 1; i++)
             {
