@@ -7,7 +7,7 @@ namespace Raycaster.Movies
 {
     public class Movie
     {
-        private Texture2D textureSheet;
+        private Image textureSheet;
         private int frameWidth;
         private int frameHeight;
         private int columns;
@@ -21,9 +21,7 @@ namespace Raycaster.Movies
 
         public bool IsDone = false;
 
-        public Color[] ColorData;
-
-        public Movie(string textureSheetPath, GraphicsDevice graphicsDevice, int columns, Texture2D frames)
+        public Movie(string textureSheetPath, GraphicsDevice graphicsDevice, int columns, Image frames)
         {
             frameWidth = 320;
             frameHeight = 180;
@@ -36,9 +34,6 @@ namespace Raycaster.Movies
             timePerFrame = 1f / 16f; // Fixed framerate of 24 fps
             currentFrame = 0;
             frameTimer = 0;
-
-            ColorData = new Color[textureSheet.Width * textureSheet.Height];
-            textureSheet.GetData(ColorData);
 
             totalAnimationTime = timePerFrame * totalFrames;
         }
@@ -66,7 +61,7 @@ namespace Raycaster.Movies
 
         }
 
-        public void Draw(Raycaster.Camera camera, SpriteBatch spriteBatch, Texture2D whiteTexture, Point screenRes)
+        public void Draw(Raycaster.Camera camera, Point screenRes)
         {
             int col = currentFrame % columns;
             int row = currentFrame / columns;
@@ -76,7 +71,7 @@ namespace Raycaster.Movies
 
             Rectangle sourceRectangle = new Rectangle(sourceX, sourceY,  frameWidth, frameHeight);
             //spriteBatch.Draw(textureSheet, new Rectangle(0, 0, screenRes.X, screenRes.Y), sourceRectangle, Color.White);
-                RaycastComputer.DrawFrame(textureSheet, camera, screenRes, sourceRectangle, ColorData);
+                RaycastComputer.DrawFrame(textureSheet, camera, screenRes, sourceRectangle);
             
         }
 

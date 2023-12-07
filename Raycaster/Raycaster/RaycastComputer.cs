@@ -1,6 +1,7 @@
 ﻿using FFmpeg.AutoGen;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using NAudio.MediaFoundation;
 using System;
 using System.Diagnostics;
 
@@ -8,7 +9,7 @@ namespace Raycaster
 {
     internal static class RaycastComputer
     {
-        public static void DrawScreen(Point screenRes,Camera camera, Level level, Texture2D textureSheet, Texture2D glowTexture, float interactibleFase, Color[] colorData, Color[] colorDataGlow)
+        public static void DrawScreen(Point screenRes,Camera camera, Level level, Image textureSheet, Image glowTexture, float interactibleFase)
         {
             int width = camera.Width;
             int height = camera.Height;
@@ -118,7 +119,6 @@ namespace Raycaster
 
                 for (int y = drawStart; y <= drawEnd; y++)
                 {
-                    camera.RenderedBuffer[i, y] = true;
                     int texY = (int)((y - drawStart - MathF.Min(0, offset / 2)) * (float)textureSheet.Height / projectedHeight);
                     int texYglow = (int)((y - drawStart - MathF.Min(0, offset / 2)) * (float)glowTexture.Height / projectedHeight);
 
@@ -134,27 +134,22 @@ namespace Raycaster
                     if (brightness > 19)
                         brightness = 19;
 
-                    Color c = GetTextureColor(colorData, textureSheet, texX, texY, GetWallTextureRect(map[mapX, mapY]));
+                    ushort c = GetTextureColor(textureSheet, texX, texY, GetWallTextureRect(map[mapX, mapY]));
 
 
                     if (map[mapX, mapY] == 100)
                     {
-                        Color cGlow = GetGlowTextureColor(colorDataGlow, glowTexture, texXglow, texYglow, interactibleFase);
+                        ushort cGlow = GetGlowTextureColor(glowTexture, texXglow, texYglow, interactibleFase);
 
-                        if (cGlow.Equals(Color.White))
+                        if (cGlow > 5)
                         {
-                            c *= 1.5f;
+                            c +=2;
                         }
                     }
 
-                    
 
-                    int br = (int)(0.21 * c.R + 0.69 * c.G + 0.15 * c.B);
-                    br = 255 - br;
-                    br *= 19;
-                    br /= 255;
 
-                    brightness -= br;
+                    brightness = c;
 
                     int[,] patern = PixelPattern(brightness);
                     
@@ -163,7 +158,16 @@ namespace Raycaster
                         patern = PixelPattern(18);
                     }
 
-                    RenderPixelPattern(screenRes, camera, i, y + (int)((i - camera.Width/2)*camera.RollAngle*0.02f), patern, brightness);
+                    int y1 = y + (int)((i - camera.Width / 2) * camera.RollAngle * 0.02f);
+                    RenderPixelPattern(screenRes, camera, i, y1, patern, brightness);
+
+
+
+                    if (y1 >= 0 && y1 < camera.Height - 1)
+                    {
+                        camera.RenderedBuffer[i, y1] = true;
+                    }
+                    
                     //float virtualpixelSize = (screenRes.X / camera.Width);
                     //Vector2 distortion = screenRes.ToVector2() - new Vector2(camera.Width * (int)(virtualpixelSize), camera.Height * (int)(virtualpixelSize));
                     //spriteBatch.Draw(whiteTexture, new Rectangle(i*8, y*8 + (int)((i - camera.Width/2)*3*camera.RollAngle*0.02f), 8, 8), c);
@@ -188,20 +192,19 @@ namespace Raycaster
                     int floorTexY = (int)(floorIntersection.Y * textureSheet.Height) % textureSheet.Height;
 
                     // Render the floor pixel
-                    Color floorColor = GetTextureColor(colorData, textureSheet, floorTexX, floorTexY, GetWallTextureRect(3)); // Adjust this based on your floor texture
+                    ushort floorColor = GetTextureColor(textureSheet, floorTexX, floorTexY, GetWallTextureRect(3)); // Adjust this based on your floor texture
 
-                    int brightness = 19;
 
-                    int br = (int)(0.21 * floorColor.R + 0.69 * floorColor.G + 0.15 * floorColor.B);
-                    br = 255 - br;
-                    br *= 19;
-                    br /= 255;
-
-                    brightness -= br;
+                    int brightness = floorColor;
 
                     int[,] patern = PixelPattern(brightness);
 
-                    RenderPixelPattern(screenRes, camera, i, y + (int)((i - camera.Width / 2) * camera.RollAngle * 0.02f), patern, brightness);
+                    int y1 = y + (int)((i - camera.Width / 2) * camera.RollAngle * 0.02f);
+                    if (y1 >= 0 && y1 < camera.Height - 1)
+                    {
+                        camera.RenderedBuffer[i, y1] = true;
+                    }
+                    RenderPixelPattern(screenRes, camera, i, y1, patern, brightness);
                 }
             }
         }
@@ -258,7 +261,7 @@ namespace Raycaster
             }
         }
 
-        public static void DrawFrame(Texture2D frame, Camera camera, Point screenRes, Rectangle source, Color[] colorData, bool scroll = false)
+        public static void DrawFrame(Image frame, Camera camera, Point screenRes, Rectangle source, bool scroll = false)
         {
             Random rand = new Random(0);
 
@@ -301,13 +304,10 @@ namespace Raycaster
                         offset += source.Width;
                     }
 
-                    Color c = GetTextureColor(colorData, frame, (offset) * (frame.Width / source.Width), j * (frame.Height / source.Height), source);
+                    ushort c = GetTextureColor(frame, (offset) * (frame.Width / source.Width), j * (frame.Height / source.Height), source);
 
-                    int br = (int)(0.21 * c.R + 0.72 * c.G + 0.07 * c.B);
-
-                    br *= 19;
-                    float fade = br % 255;
-                    br /= 255;
+                    int br = c;
+                    float fade = br % 19;
 
                     
 
@@ -324,7 +324,7 @@ namespace Raycaster
 
 
 
-        private static Color GetTextureColor(Color[] data, Texture2D texture, int x, int y, Rectangle source)
+        private static ushort GetTextureColor(Image texture, int x, int y, Rectangle source)
         {
             int texX = x * source.Width / texture.Width + source.X;
             int texY = y * source.Height / texture.Height + source.Y;
@@ -333,13 +333,13 @@ namespace Raycaster
             {
                 int sourceX = texX - source.Left;
                 int sourceY = texY - source.Top;
-                return data[(sourceY + source.Top) * texture.Width + (sourceX + source.Left)];
+                return texture.GetBrightness(sourceX + source.Left,sourceY + source.Top);
             }
 
-            return Color.White;
+            return 19;
         }
 
-        private static Color GetGlowTextureColor(Color[] data, Texture2D texture, int x, int y, float glowProgress)
+        private static ushort GetGlowTextureColor(Image texture, int x, int y, float glowProgress)
         {
 
             x += (int)(glowProgress * texture.Width);
@@ -347,10 +347,10 @@ namespace Raycaster
 
             if (x >= 0 && x < texture.Width && y >= 0 && y < texture.Height)
             {
-                return data[y * texture.Width + x];
+                return texture.GetBrightness(x, y);
             }
 
-            return Color.White;
+            return 19;
         }
 
         private static Rectangle GetWallTextureRect(int i)
@@ -367,7 +367,7 @@ namespace Raycaster
             return new Rectangle(sourceX, sourceY, tileWidth, tileHeight);
         }
 
-        public static void DrawEntity(Point screenRes, Camera camera, Entity entity, Color[] colorData, bool outlined = false)
+        public static void DrawEntity(Point screenRes, Camera camera, Entity entity, bool outlined = false)
         {
             Color transparent = new Color(155, 0, 139);
 
@@ -458,16 +458,12 @@ namespace Raycaster
                     if (brightness > 19)
                         brightness = 19;
 
-                    Color c = GetTextureColor(colorData, entity.Texture, (int)(i* distance*5), (int)(j * distance*5), new Rectangle(entity.Texture.Width / 8 * (spriteId%8), entity.Texture.Height / 7 * (spriteId/8), entity.Texture.Width/8, entity.Texture.Height/7));
+                    ushort c = GetTextureColor(entity.Texture, (int)(i* distance*5), (int)(j * distance*5), new Rectangle(entity.Texture.Width / 8 * (spriteId%8), entity.Texture.Height / 7 * (spriteId/8), entity.Texture.Width/8, entity.Texture.Height/7));
 
-                    if (c == transparent)
+                    if (c == 255)
                         continue;
 
-                    int br = (int)(0.21 * c.R + 0.69 * c.G + 0.15 * c.B);
-
-                    br = 255 - br;
-                    br *= 17;
-                    br /= 255;
+                    int br = 19 - c;
 
                     brightness -= br;
 
@@ -596,7 +592,7 @@ namespace Raycaster
             
         }
 
-        public static void DrawGun(Point screenRes, Camera camera, int gun, int frame, Texture2D texture, Color[] colorData)
+        public static void DrawGun(Point screenRes, Camera camera, int gun, int frame, Image texture)
         {
             Color transparent = new Color(152, 0, 136);
 
@@ -610,16 +606,12 @@ namespace Raycaster
                 {
                     int brightness = 19;
 
-                    Color c = GetTextureColor(colorData, texture, x * (texture.Width/size), y * (texture.Height / size), new Rectangle((texture.Width / 5)*(frame)+frame, (texture.Height / 4)*gun+ gun, texture.Width / 4-4-1, texture.Height / 3));
+                    ushort c = GetTextureColor(texture, x * (texture.Width/size), y * (texture.Height / size), new Rectangle((texture.Width / 5)*(frame)+frame, (texture.Height / 4)*gun+ gun, texture.Width / 4-4-1, texture.Height / 3));
 
-                    if (c == transparent)
+                    if (c == 255)
                         continue;
 
-                    int br = (int)(0.21 * c.R + 0.69 * c.G + 0.15 * c.B);
-
-                    br = 255 - br;
-                    br *= 19;
-                    br /= 255;
+                    int br = 19 - c;
 
                     brightness -= br;
 
@@ -653,7 +645,7 @@ namespace Raycaster
         }
 
 
-        public static void DrawTopView(Camera camera, Level level, SpriteBatch spriteBatch, Texture2D textureSheet)
+        /*public static void DrawTopView(Camera camera, Level level, SpriteBatch spriteBatch)
         {
             int width = camera.Width*2;
 
@@ -696,7 +688,7 @@ namespace Raycaster
 
             Rectangle playerView2Dest = new Rectangle((int)((position.X + camera.Right.X * 0.1f) * cellSize) - 5, (int)((position.Y + camera.Right.Y * 0.1f) * cellSize) - 5, 10, 10);
             spriteBatch.Draw(textureSheet, playerView2Dest, Color.Pink);
-        }
+        }*/
 
         private static int[,] PixelPattern(int type)
         {

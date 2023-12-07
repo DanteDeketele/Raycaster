@@ -26,13 +26,12 @@ namespace Raycaster
 
         private InputHandeler _inputHandeler;
 
-        private Texture2D _whiteTexture;
-        private Texture2D _skyTexture;
-        private Texture2D _textureSheet;
-        private Texture2D _glowTexture;
-        private Texture2D _enemieTexture;
-        private Texture2D _gunTexture;
-        private Texture2D _movieTexture;
+        private Image _skyTexture;
+        private Image _textureSheet;
+        private Image _glowTexture;
+        private Image _enemieTexture;
+        private Image _gunTexture;
+        private Image _movieTexture;
 
 
 
@@ -74,13 +73,6 @@ namespace Raycaster
         private int _waitedAFrameLoadingScreen = 0;
 
 
-        Color[] _colorData;
-        Color[] _colorSkyData;
-        Color[] _colorGlowData;
-        Color[] _colorEnemyData;
-        Color[] _colorGunData;
-
-
         public MainGame()
         {
 
@@ -90,8 +82,8 @@ namespace Raycaster
 
 
             // Set the preferred screen resolution
-            _graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
-            _graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
+            _graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width/2;
+            _graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height/2;
 
             _screenRes = new Point(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
 
@@ -131,23 +123,20 @@ namespace Raycaster
                 Debug.WriteLine(level);
             }
 
-            _whiteTexture = new Texture2D(GraphicsDevice, 1, 1);
-            _whiteTexture.SetData(new[] { Color.White });
-
             FileStream fileStream = new FileStream("Assets/sheet.png", FileMode.Open);
-            _textureSheet = Texture2D.FromStream(GraphicsDevice, fileStream);
+            _textureSheet = Image.TextureToImage(Texture2D.FromStream(GraphicsDevice, fileStream));
             fileStream.Dispose();
             FileStream fileStream0 = new FileStream("Assets/sky.png", FileMode.Open);
-            _skyTexture = Texture2D.FromStream(GraphicsDevice, fileStream0);
+            _skyTexture = Image.TextureToImage(Texture2D.FromStream(GraphicsDevice, fileStream0));
             fileStream0.Dispose();
             FileStream fileStream1 = new FileStream("Assets/glow.png", FileMode.Open);
-            _glowTexture = Texture2D.FromStream(GraphicsDevice, fileStream1);
+            _glowTexture = Image.TextureToImage(Texture2D.FromStream(GraphicsDevice, fileStream1));
             fileStream1.Dispose();
             FileStream fileStream2 = new FileStream("Assets/enemies.png", FileMode.Open);
-            _enemieTexture = Texture2D.FromStream(GraphicsDevice, fileStream2);
+            _enemieTexture = Image.TextureToImage(Texture2D.FromStream(GraphicsDevice, fileStream2));
             fileStream2.Dispose();
             FileStream fileStream3 = new FileStream("Assets/gunsheet.png", FileMode.Open);
-            _gunTexture = Texture2D.FromStream(GraphicsDevice, fileStream3);
+            _gunTexture = Image.TextureToImage(Texture2D.FromStream(GraphicsDevice, fileStream3));
             fileStream3.Dispose();
 
             _soundEffects = AudioUnpacker.GetSounds("Assets/Sounds");
@@ -171,27 +160,12 @@ namespace Raycaster
             _paused = true;
             _drawnLoadingScreen = false;
             _waitedAFrameLoadingScreen = 0;
-
-            _colorData = new Color[_textureSheet.Width * _textureSheet.Height];
-            _textureSheet.GetData(_colorData);
-            _colorSkyData = new Color[_skyTexture.Width * _skyTexture.Height];
-            _skyTexture.GetData(_colorSkyData);
-
-            _colorGlowData = new Color[_glowTexture.Width * _glowTexture.Height];
-            _glowTexture.GetData(_colorGlowData);
-
-            _colorEnemyData = new Color[_enemieTexture.Width * _enemieTexture.Height];
-            _enemieTexture.GetData(_colorEnemyData);
-
-            _colorGunData = new Color[_gunTexture.Width * _gunTexture.Height];
-            _gunTexture.GetData(_colorGunData);
         }
 
         protected override void UnloadContent()
         {
             base.UnloadContent();
             _spriteBatch.Dispose();
-            _whiteTexture.Dispose();
         }
 
         protected override void Update(GameTime gameTime)
@@ -265,7 +239,7 @@ namespace Raycaster
                     if (!_shootAnimation)
                     {
                         _shootAnimation = true;
-                        Bullet bullet = new Bullet(_whiteTexture, _camera.Position + _camera.Forward * 0.01f, _enemies.ToArray(), 1);
+                        Bullet bullet = new Bullet(new Image(1,1,new ushort[,] { { 19 } }),_camera.Position + _camera.Forward * 0.01f, _enemies.ToArray(), 1);
                         bullet.waypoints = new Vector2[] { _camera.Forward * 10 + _camera.Position };
                         bullet.Speed = 20;
                         bullet.Size = 0.1f;
@@ -413,7 +387,7 @@ namespace Raycaster
         private void LoadMovie(string movieName)
         {
             FileStream fileStream4 = new FileStream($"Assets/Movies/{movieName}.png", FileMode.Open);
-            _movieTexture = Texture2D.FromStream(GraphicsDevice, fileStream4);
+            _movieTexture = Image.TextureToImage(Texture2D.FromStream(GraphicsDevice, fileStream4));
             fileStream4.Dispose();
             _introMovie = new Movie($"Assets/Movies/{movieName}.png", _graphics.GraphicsDevice, 100, _movieTexture);
             _movieSoundEffects[movieName].Play(0.1f, 0, 0);
@@ -454,17 +428,17 @@ namespace Raycaster
 
                 
 
-                RaycastComputer.DrawGun(_screenRes, _camera, _gunIndex, _shootFrame, _gunTexture, _colorGunData);
+                RaycastComputer.DrawGun(_screenRes, _camera, _gunIndex, _shootFrame, _gunTexture);
 
-                RaycastComputer.DrawScreen(_screenRes, _camera, _levels[_currentLevelId],  _textureSheet, _glowTexture, _blinkFase, _colorData, _colorGlowData);
-                RaycastComputer.DrawFrame(_skyTexture, _camera, _screenRes, new Rectangle(0, 0, _camera.Width, _camera.Height), _colorSkyData, true);
-                _levels[_currentLevelId].DrawEntities(_screenRes, _camera, _colorEnemyData);
+                RaycastComputer.DrawScreen(_screenRes, _camera, _levels[_currentLevelId],  _textureSheet, _glowTexture, _blinkFase);
+                RaycastComputer.DrawFrame(_skyTexture, _camera, _screenRes, new Rectangle(0, 0, _camera.Width, _camera.Height), true);
+                _levels[_currentLevelId].DrawEntities(_screenRes, _camera);
 
                 RaycastComputer.DrawEntityOutlines(_screenRes, _camera);
 
 
-                if (_enableTopView)
-                    RaycastComputer.DrawTopView(_camera, _levels[_currentLevelId], _spriteBatch, _whiteTexture);
+                /*if (_enableTopView)
+                    RaycastComputer.DrawTopView(_camera, _levels[_currentLevelId], _spriteBatch);*/
 
                 
 
@@ -495,10 +469,10 @@ namespace Raycaster
             }
             
             RaycastComputer.DrawGunOutlines(_screenRes, _camera);
-                
+            _introMovie?.Draw(_camera, _screenRes);    
             _camera.Draw(_spriteBatch, _screenRes);
             
-            _introMovie?.Draw(_camera, _spriteBatch, _whiteTexture, _screenRes);
+            
 
             if (_loadMovieQue)
             {

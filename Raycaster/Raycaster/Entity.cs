@@ -8,7 +8,7 @@ namespace Raycaster
 
     internal class Entity
     {
-        public Texture2D Texture;
+        public Image Texture;
 
         public int State = 1;
 
@@ -33,7 +33,7 @@ namespace Raycaster
         public float Angle = 0;
         public float Radius = 0.3f;
 
-        public Entity(Texture2D texture, Vector2 position, float angle = 0)
+        public Entity(Image texture, Vector2 position, float angle = 0)
         {
             Texture = texture;
             Position = position;

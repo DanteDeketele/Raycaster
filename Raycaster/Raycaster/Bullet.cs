@@ -5,7 +5,7 @@ namespace Raycaster
 {
     internal class Bullet : Entity
     {
-        public Bullet(Texture2D texture, Vector2 position, Enemy[] enemies, int damage = 0) : base(texture, position, 0)
+        public Bullet(Image texture, Vector2 position, Enemy[] enemies, int damage = 0) : base(texture, position, 0)
         {
             Damage = damage;
             _enemies = enemies;

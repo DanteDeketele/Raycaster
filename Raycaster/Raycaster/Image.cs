@@ -3,7 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Raycaster
 {
-    internal struct Image
+    public struct Image
     {
         private readonly ushort[,] _pixels;
         private readonly int _width;
@@ -49,7 +49,7 @@ namespace Raycaster
                     else
                     {
                         int brightness = 19;
-                        int br = (int)(0.21 * color.R + 0.69 * color.G + 0.15 * color.B);
+                        int br = (int)(0.299 * color.R + 0.587 * color.G + 0.114 * color.B);
 
                         br = 255 - br;
                         br *= 17;

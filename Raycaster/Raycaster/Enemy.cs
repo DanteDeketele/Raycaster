@@ -20,7 +20,7 @@ namespace Raycaster
         private float deathTimer = 1.25f/2;
         private readonly Dictionary<string, SoundEffect> _soundEffects;
 
-        public Enemy(Texture2D texture, Vector2 position, Dictionary<string, SoundEffect> soundEffects, float angle = 0) : base(texture, position, angle)
+        public Enemy(Image texture, Vector2 position, Dictionary<string, SoundEffect> soundEffects, float angle = 0) : base(texture, position, angle)
         {
             _soundEffects = soundEffects;
         }
