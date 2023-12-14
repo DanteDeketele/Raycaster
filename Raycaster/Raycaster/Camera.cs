@@ -9,7 +9,7 @@ namespace Raycaster
         public int Width { get; set; }
         public int Height { get; set; }
 
-        public float Radius { get; set; } = 0.1f;
+        public float Radius { get; set; } = 0.2f;
 
         public float Angle { get; set; }
 
@@ -32,13 +32,17 @@ namespace Raycaster
 
         public bool GrayScale = false;
 
-        public Vector2 Position { get; set; } = Vector2.One*1.5f;
+        public Vector2 Position { get; set; } = Vector2.One*5.5f;
         public Vector2 Right => new Vector2(MathF.Cos(Angle+MathF.PI/2), MathF.Sin(Angle+MathF.PI / 2));
 
         public Vector2 Forward => new Vector2(MathF.Cos(Angle), MathF.Sin(Angle));
 
         public Texture2D Texture;
         private Color[] Colors;
+
+        public Image Overlay;
+
+        public Color FilterColor = new Color(183, 165, 143);
         public Camera(int width, int height, GraphicsDevice graphicsDevice)
         {
             Width = width;
@@ -69,11 +73,19 @@ namespace Raycaster
         }
         public void SetColor(Color color, int x, int y, int size = 1)
         {
+            if (x < 0 || x >= Width * size || y < 0 || y >= Height * size)
+                return;
             for (int i = 0; i < size; i++)
             {
                 for (int j = 0; j < size; j++)
                 {
-                    Colors[(x + i) + (y + j) * Texture.Width] = color;
+                    ushort overlay = 19;
+                    if (Overlay.Width == 320)
+                    {
+                        overlay = Overlay.GetBrightness(x/size, y/size);
+                    }
+                    Colors[(x + i) + (y + j) * Texture.Width] = Color.Multiply(Color.Multiply(FilterColor, color.R/255f), overlay/19f);
+                    
                 }
             }
         }

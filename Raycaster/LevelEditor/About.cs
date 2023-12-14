@@ -12,14 +12,10 @@ namespace LevelEditor
 {
     public partial class About : Form
     {
-        public About()
+        public About(string path)
         {
             InitializeComponent();
-        }
-
-        private void label1_Click(object sender, EventArgs e)
-        {
-
+            label2.Text = path;
         }
     }
 }

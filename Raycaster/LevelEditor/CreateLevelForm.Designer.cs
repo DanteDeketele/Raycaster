@@ -6,14 +6,6 @@
         /// Required designer variable.
         /// </summary>
         private System.ComponentModel.IContainer components = null;
-        private Label lblWidth;
-        private Label lblHeight;
-        private Label lblTitle;
-        private TextBox txtWidth;
-        private TextBox txtHeight;
-        private TextBox txtTitle;
-        private Button btnOK;
-        private Button btnCancel;
         /// <summary>
         /// Clean up any resources being used.
         /// </summary>
@@ -37,95 +29,82 @@
         /// </summary>
         private void InitializeComponent()
         {
-            lblWidth = new Label();
-            lblHeight = new Label();
-            lblTitle = new Label();
             txtWidth = new TextBox();
             txtHeight = new TextBox();
             txtTitle = new TextBox();
-            btnOK = new Button();
-            btnCancel = new Button();
+            button1 = new Button();
+            button2 = new Button();
             SuspendLayout();
-            // 
-            // lblWidth
-            // 
-            lblWidth.AutoSize = true;
-            lblWidth.Location = new Point(12, 15);
-            lblWidth.Name = "lblWidth";
-            lblWidth.Size = new Size(44, 13);
-            lblWidth.TabIndex = 0;
-            lblWidth.Text = "Width:";
-            // 
-            // lblHeight
-            // 
-            lblHeight.AutoSize = true;
-            lblHeight.Location = new Point(12, 41);
-            lblHeight.Name = "lblHeight";
-            lblHeight.Size = new Size(47, 13);
-            lblHeight.TabIndex = 2;
-            lblHeight.Text = "Height:";
-            // 
-            // lblTitle
-            // 
-            lblTitle.AutoSize = true;
-            lblTitle.Location = new Point(12, 67);
-            lblTitle.Name = "lblTitle";
-            lblTitle.Size = new Size(30, 13);
-            lblTitle.TabIndex = 4;
-            lblTitle.Text = "Title:";
             // 
             // txtWidth
             // 
-            txtWidth.Location = new Point(85, 12);
+            txtWidth.Location = new Point(192, 12);
             txtWidth.Name = "txtWidth";
-            txtWidth.Size = new Size(100, 31);
-            txtWidth.TabIndex = 1;
+            txtWidth.Size = new Size(292, 23);
+            txtWidth.TabIndex = 0;
             // 
             // txtHeight
             // 
-            txtHeight.Location = new Point(85, 38);
+            txtHeight.Location = new Point(192, 41);
             txtHeight.Name = "txtHeight";
-            txtHeight.Size = new Size(100, 31);
-            txtHeight.TabIndex = 3;
+            txtHeight.Size = new Size(292, 23);
+            txtHeight.TabIndex = 1;
             // 
             // txtTitle
             // 
-            txtTitle.Location = new Point(85, 64);
+            txtTitle.Location = new Point(192, 70);
             txtTitle.Name = "txtTitle";
-            txtTitle.Size = new Size(100, 31);
-            txtTitle.TabIndex = 5;
+            txtTitle.Size = new Size(292, 23);
+            txtTitle.TabIndex = 2;
             // 
-            // btnOK
+            // button1
             // 
-            btnOK.Location = new Point(15, 100);
-            btnOK.Name = "btnOK";
-            btnOK.Size = new Size(75, 23);
-            btnOK.TabIndex = 6;
-            btnOK.Text = "OK";
-            btnOK.UseVisualStyleBackColor = true;
-            btnOK.Click += btnOK_Click;
+            button1.Font = new Font("Century Gothic", 12F, FontStyle.Bold, GraphicsUnit.Point);
+            button1.Location = new Point(12, 232);
+            button1.Name = "button1";
+            button1.Size = new Size(144, 61);
+            button1.TabIndex = 3;
+            button1.Text = "Cancel";
+            button1.UseVisualStyleBackColor = true;
+            button1.Click += button1_Click;
             // 
-            // btnCancel
+            // button2
             // 
-            btnCancel.Location = new Point(110, 100);
-            btnCancel.Name = "btnCancel";
-            btnCancel.Size = new Size(75, 23);
-            btnCancel.TabIndex = 7;
-            btnCancel.Text = "Cancel";
-            btnCancel.UseVisualStyleBackColor = true;
-            btnCancel.Click += btnCancel_Click;
+            button2.Font = new Font("Century Gothic", 12F, FontStyle.Bold, GraphicsUnit.Point);
+            button2.Location = new Point(162, 232);
+            button2.Name = "button2";
+            button2.Size = new Size(322, 61);
+            button2.TabIndex = 4;
+            button2.Text = "Create Level";
+            button2.UseVisualStyleBackColor = true;
+            button2.Click += button2_Click;
             // 
             // CreateLevelForm
             // 
-            AutoScaleDimensions = new SizeF(10F, 25F);
+            AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(620, 396);
+            ClientSize = new Size(496, 305);
+            Controls.Add(button2);
+            Controls.Add(button1);
+            Controls.Add(txtTitle);
+            Controls.Add(txtHeight);
+            Controls.Add(txtWidth);
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            Margin = new Padding(2);
+            MaximizeBox = false;
             Name = "CreateLevelForm";
-            Text = "CreateLevelForm";
-            Load += CreateLevelForm_Load;
+            SizeGripStyle = SizeGripStyle.Hide;
+            Text = "Create a new Level";
             ResumeLayout(false);
+            PerformLayout();
         }
 
         #endregion
+
+        private TextBox txtWidth;
+        private TextBox txtHeight;
+        private TextBox txtTitle;
+        private Button button1;
+        private Button button2;
     }
 }

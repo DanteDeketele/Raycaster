@@ -9,7 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using FFmpeg.AutoGen;
+using System.Threading.Tasks.Dataflow;
 
 namespace Raycaster
 {
@@ -22,7 +22,8 @@ namespace Raycaster
         private int _currentLevelId = 0;
         private Camera _camera;
         private Vector2 _prevPos;
-        private List<Entity> _entitiesToRemove = new List<Entity>();
+        
+
 
         private InputHandeler _inputHandeler;
 
@@ -32,6 +33,7 @@ namespace Raycaster
         private Image _enemieTexture;
         private Image _gunTexture;
         private Image _movieTexture;
+
 
 
 
@@ -72,6 +74,9 @@ namespace Raycaster
         private bool _drawnLoadingScreen = false;
         private int _waitedAFrameLoadingScreen = 0;
 
+        private int _health = 5;
+
+        private float _ladderProgress = 0;
 
         public MainGame()
         {
@@ -82,16 +87,19 @@ namespace Raycaster
 
 
             // Set the preferred screen resolution
-            _graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width/2;
-            _graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height/2;
+            _graphics.PreferredBackBufferWidth = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Width;
+            _graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height;
 
             _screenRes = new Point(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
+
+            this.IsFixedTimeStep = true;
+            this.TargetElapsedTime = TimeSpan.FromSeconds(1d / 30d); //60);
 
             // Set the game to run in fullscreen mode
             //_graphics.IsFullScreen = true;
 
-            _graphics.SynchronizeWithVerticalRetrace = false;
-            IsFixedTimeStep = false;
+            //_graphics.SynchronizeWithVerticalRetrace = false;
+            //IsFixedTimeStep = false;
 
             // Apply the changes
             _graphics.ApplyChanges();
@@ -104,10 +112,9 @@ namespace Raycaster
             //_camera = new Camera(1560/10, 1440/10, GraphicsDevice);
 
             _prevPos = _camera.Position;
-            _inputHandeler = new InputHandeler(new Point(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2));
+            _inputHandeler = new InputHandeler(new Point(_graphics.PreferredBackBufferWidth/2, _graphics.PreferredBackBufferHeight/2));
 
             IsMouseVisible = false;
-
 
             base.Initialize();
         }
@@ -138,6 +145,9 @@ namespace Raycaster
             FileStream fileStream3 = new FileStream("Assets/gunsheet.png", FileMode.Open);
             _gunTexture = Image.TextureToImage(Texture2D.FromStream(GraphicsDevice, fileStream3));
             fileStream3.Dispose();
+            FileStream fileStream6 = new FileStream("Assets/overlay.png", FileMode.Open);
+            _camera.Overlay = Image.TextureToImage(Texture2D.FromStream(GraphicsDevice, fileStream6));
+            fileStream6.Dispose();
 
             _soundEffects = AudioUnpacker.GetSounds("Assets/Sounds");
             //_soundEffects["music"].Play(0.1f, 0, 0);
@@ -155,22 +165,30 @@ namespace Raycaster
             _levels[_currentLevelId].entities.Add(enemy2);
             _enemies.Add(enemy2);
 
+            _levels[0].heightOffset = -1f;
+            _levels[1].heightOffset = -0f;
+            _currentLevelId = 1;
+
             _loadMovieQue = true;
             _loadMovieQueName = "intro";
             _paused = true;
             _drawnLoadingScreen = false;
             _waitedAFrameLoadingScreen = 0;
+
         }
 
         protected override void UnloadContent()
         {
+
             base.UnloadContent();
             _spriteBatch.Dispose();
         }
 
         protected override void Update(GameTime gameTime)
         {
+
             float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+
 
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
@@ -234,12 +252,12 @@ namespace Raycaster
                 _prevWheelValue = Mouse.GetState().ScrollWheelValue;
 
 
-                if (Mouse.GetState().LeftButton == ButtonState.Pressed)
+                if (Mouse.GetState().LeftButton == ButtonState.Pressed && _gunIndex!=0)
                 {
                     if (!_shootAnimation)
                     {
                         _shootAnimation = true;
-                        Bullet bullet = new Bullet(new Image(1,1,new ushort[,] { { 19 } }),_camera.Position + _camera.Forward * 0.01f, _enemies.ToArray(), 1);
+                        Bullet bullet = new Bullet(new Image(1,1,new ushort[,] { { 4 } }),_camera.Position + _camera.Forward * 0.01f, _enemies.ToArray(), _levels[_currentLevelId], 1);
                         bullet.waypoints = new Vector2[] { _camera.Forward * 10 + _camera.Position };
                         bullet.Speed = 20;
                         bullet.Size = 0.1f;
@@ -275,24 +293,78 @@ namespace Raycaster
                     _walkPhase = 0;
                 }
 
+                if (_currentLevelId == 1 && map[(int)(_camera.Position.X), (int)(_camera.Position.Y)] == 67)
+                {
+                    _currentLevelId = 0;
+                    _ladderProgress = 1;
+                    _levels[0].heightOffset = 0f + _ladderProgress;
+                    _levels[1].heightOffset = 1f + _ladderProgress;
+                }
+
+                if (_currentLevelId == 0 && map[(int)(_camera.Position.X + _camera.Forward.X/2f), (int)(_camera.Position.Y + _camera.Forward.Y / 2f)] == 2)
+                {
+                    if (InputHandeler.MoveDirection.Y > 0)
+                    {
+                        _ladderProgress += deltaTime;
+                        _levels[0].heightOffset = 0f - _ladderProgress;
+                        _levels[1].heightOffset = 1f - _ladderProgress;
+
+
+                        if (_ladderProgress >= 1)
+                        {
+                            _currentLevelId = 1;
+                            _levels[0].heightOffset = -1f;
+                            _levels[1].heightOffset = 0f;
+                            _camera.Position += _camera.Forward * _camera.Radius *2;
+                        }
+                    }
+                    if (InputHandeler.MoveDirection.Y < 0)
+                    {
+                        _ladderProgress += deltaTime;
+                        if (_ladderProgress <= 0)
+                        {
+                            _ladderProgress = 0;
+                            _levels[0].heightOffset = 0f;
+                            _levels[1].heightOffset = 1f;
+                        }
+                    }
+                }
+                else
+                {
+                    if (_currentLevelId == 0)
+                    {
+                        if (_ladderProgress > 0)
+                        {
+                            _ladderProgress -= deltaTime * 4;
+                        }
+                        else
+                        {
+                            _ladderProgress = 0;
+                        }
+                        _levels[0].heightOffset = 0f - _ladderProgress;
+                        _levels[1].heightOffset = 1f - _ladderProgress;
+                    }
+                }
+
+
                 try
                 {
 
-                    if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y)] != 0 && map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y)] != 66 && moveDirForward.X > 0)
+                    if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y)] != 0 && map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y)] != 66 && moveDirForward.X > 0 && map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y)] != 67)
                         moveDirForward.X = 0;
-                    if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y)] != 0 && map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y)] != 66 && moveDirForward.X < 0)
+                    if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y)] != 0 && map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y)] != 66 && moveDirForward.X < 0 && map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y)] != 67)
                         moveDirForward.X = 0;
-                    if (map[(int)(_camera.Position.X), (int)(_camera.Position.Y + radius)] != 0 && map[(int)(_camera.Position.X), (int)(_camera.Position.Y + radius)] != 66 && moveDirForward.Y > 0)
+                    if (map[(int)(_camera.Position.X), (int)(_camera.Position.Y + radius)] != 0 && map[(int)(_camera.Position.X), (int)(_camera.Position.Y + radius)] != 66 && moveDirForward.Y > 0 && map[(int)(_camera.Position.X), (int)(_camera.Position.Y + radius)] != 67)
                         moveDirForward.Y = 0;
-                    if (map[(int)(_camera.Position.X), (int)(_camera.Position.Y - radius)] != 0 && map[(int)(_camera.Position.X), (int)(_camera.Position.Y - radius)] != 66 && moveDirForward.Y < 0)
+                    if (map[(int)(_camera.Position.X), (int)(_camera.Position.Y - radius)] != 0 && map[(int)(_camera.Position.X), (int)(_camera.Position.Y - radius)] != 66 && moveDirForward.Y < 0 && map[(int)(_camera.Position.X), (int)(_camera.Position.Y - radius)] != 67)
                         moveDirForward.Y = 0;
-                    if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y)] != 0 && map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y)] != 66 && moveDirRight.X > 0)
+                    if (map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y)] != 0 && map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y)] != 66 && moveDirRight.X > 0 && map[(int)(_camera.Position.X + radius), (int)(_camera.Position.Y)] != 67)
                         moveDirRight.X = 0;
-                    if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y)] != 0 && map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y)] != 66 && moveDirRight.X < 0)
+                    if (map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y)] != 0 && map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y)] != 66 && moveDirRight.X < 0 && map[(int)(_camera.Position.X - radius), (int)(_camera.Position.Y)] != 67)
                         moveDirRight.X = 0;
-                    if (map[(int)(_camera.Position.X), (int)(_camera.Position.Y + radius)] != 0 && map[(int)(_camera.Position.X), (int)(_camera.Position.Y + radius)] != 66 && moveDirRight.Y > 0)
+                    if (map[(int)(_camera.Position.X), (int)(_camera.Position.Y + radius)] != 0 && map[(int)(_camera.Position.X), (int)(_camera.Position.Y + radius)] != 66 && moveDirRight.Y > 0 && map[(int)(_camera.Position.X), (int)(_camera.Position.Y + radius)] != 67)
                         moveDirRight.Y = 0;
-                    if (map[(int)(_camera.Position.X), (int)(_camera.Position.Y - radius)] != 0 && map[(int)(_camera.Position.X), (int)(_camera.Position.Y - radius)] != 66 && moveDirRight.Y < 0)
+                    if (map[(int)(_camera.Position.X), (int)(_camera.Position.Y - radius)] != 0 && map[(int)(_camera.Position.X), (int)(_camera.Position.Y - radius)] != 66 && moveDirRight.Y < 0 && map[(int)(_camera.Position.X), (int)(_camera.Position.Y - radius)] != 67)
                         moveDirRight.Y = 0;
 
                     _camera.Position += moveDirForward * deltaTime;
@@ -360,11 +432,11 @@ namespace Raycaster
 
                     if (!entity.Active)
                     {
-                        _entitiesToRemove.Add(entity);
+                        _levels[_currentLevelId].entitiesToRemove.Add(entity);
                     }
                 }
 
-                foreach (var entity in _entitiesToRemove)
+                foreach (var entity in _levels[_currentLevelId].entitiesToRemove)
                 {
                     _levels[_currentLevelId].entities.Remove(entity);
                     if (entity is Enemy)
@@ -372,12 +444,20 @@ namespace Raycaster
                         _enemies.Remove(entity as Enemy);
                     }
                 }
-            }
-            _entitiesToRemove.Clear();
 
+                foreach (var entity in _levels[_currentLevelId].entitiesToAdd)
+                {
+                    _levels[_currentLevelId].entities.Add(entity);
+                }
+
+                _levels[_currentLevelId].entitiesToRemove.Clear();
+                _levels[_currentLevelId].entitiesToAdd.Clear();
+            }
             
-            
-                
+
+
+
+
             _camera.Render = !Keyboard.GetState().IsKeyDown(Keys.R);
             _camera.Update(deltaTime);
 
@@ -413,12 +493,39 @@ namespace Raycaster
 
             if (!_paused && !_loadMovieQue)
             {
-                DrawAll(deltaTime);
+                if (_shootAnimation)
+                {
+                    _shootTime += deltaTime * 20f;
 
+                    _shootFrame = (int)_shootTime;
+                    if (_shootTime >= 5)
+                    {
+                        _shootAnimation = false;
+                        _shootTime = 0;
+                        _shootFrame = 0;
+                    }
+                }
+                RaycastComputer.DrawGun(_screenRes, _camera, _gunIndex, _shootFrame, _gunTexture);
+
+                if (_currentLevelId == 1)
+                {
+                    DrawLevel(_levels[0], deltaTime);
+                    DrawLevel(_levels[1], deltaTime);
+                }
+                if (_currentLevelId == 0)
+                {
+                    DrawLevel(_levels[1], deltaTime);
+                    DrawLevel(_levels[0], deltaTime);
+                }
+
+
+                RaycastComputer.DrawFrame(_skyTexture, _camera, _screenRes, new Rectangle(0, 0, _camera.Width, _camera.Height), true);
+
+                RaycastComputer.DrawEntityOutlines(_screenRes, _camera);
             }
 
 
-
+            
             _fps.Add(deltaTime);
             _fpsTimer += deltaTime;
             if (_fpsTimer > 0.25f && !_loadMovieQue)
@@ -465,35 +572,12 @@ namespace Raycaster
             base.Draw(gameTime);
         }
 
-        private void DrawAll(float deltaTime)
+        private void DrawLevel(Level level,float deltaTime, bool renderAll = false)
         {
-            if (_shootAnimation)
-            {
-                _shootTime += deltaTime * 20f;
 
-                _shootFrame = (int)_shootTime;
-                if (_shootTime >= 5)
-                {
-                    _shootAnimation = false;
-                    _shootTime = 0;
-                    _shootFrame = 0;
-                }
-            }
+            RaycastComputer.DrawScreen(_screenRes, _camera, level, _textureSheet, _glowTexture, _blinkFase, renderAll);
 
-
-
-            RaycastComputer.DrawGun(_screenRes, _camera, _gunIndex, _shootFrame, _gunTexture);
-
-            RaycastComputer.DrawScreen(_screenRes, _camera, _levels[_currentLevelId], _textureSheet, _glowTexture, _blinkFase);
-            RaycastComputer.DrawFrame(_skyTexture, _camera, _screenRes, new Rectangle(0, 0, _camera.Width, _camera.Height), true);
-            _levels[_currentLevelId].DrawEntities(_screenRes, _camera);
-
-            RaycastComputer.DrawEntityOutlines(_screenRes, _camera);
-
-
-            /*if (_enableTopView)
-                RaycastComputer.DrawTopView(_camera, _levels[_currentLevelId], _spriteBatch);*/
-
+            level.DrawEntities(_screenRes, _camera);
         }
     }
 }

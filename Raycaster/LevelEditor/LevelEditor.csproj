@@ -27,4 +27,10 @@
     <Folder Include="Resources\Icons\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Resources\Screenshot 2023-08-29 132652.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

@@ -12,6 +12,7 @@ namespace Raycaster
             MapData = mapData;
         }
 
+        public float heightOffset = 0;
 
         public string Name { get; set; }
 
@@ -21,6 +22,8 @@ namespace Raycaster
         public int Height => MapData.GetLength(1);
 
         public List<Entity> entities = new List<Entity>();
+        public List<Entity> entitiesToRemove = new List<Entity>();
+        public List<Entity> entitiesToAdd = new List<Entity>();
 
         public int GetCellValue(int x, int y) => MapData[x, y];
         public void SetCellValue(int x, int y, int value)
@@ -50,6 +53,11 @@ namespace Raycaster
         public void DrawEntities(Point screenRes,Camera camera)
         {
             foreach (Entity entity in entities) {
+                if (entity is BulletHole)
+                {
+                    //RaycastComputer.DrawBulletHole(screenRes, camera, (BulletHole)entity);
+                    continue;
+                }
                 RaycastComputer.DrawEntity(screenRes,camera, entity, entity.DistanceToCamera < 4);
             }
         }

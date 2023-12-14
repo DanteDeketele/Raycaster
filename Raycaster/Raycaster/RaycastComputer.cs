@@ -4,13 +4,12 @@ using Microsoft.Xna.Framework.Graphics;
 using NAudio.MediaFoundation;
 using System;
 using System.Diagnostics;
-using System.Threading.Tasks;
 
 namespace Raycaster
 {
     internal static class RaycastComputer
     {
-        public static void DrawScreen(Point screenRes,Camera camera, Level level, Image textureSheet, Image glowTexture, float interactibleFase)
+        public static void DrawScreen(Point screenRes,Camera camera, Level level, Image textureSheet, Image glowTexture, float interactibleFase, bool renderAllWalls = false)
         {
             int width = camera.Width;
             int height = camera.Height;
@@ -22,7 +21,7 @@ namespace Raycaster
             Vector2 playerDir = camera.Forward;
 
             // Use Parallel.For to parallelize the outer loop
-            Parallel.For(0, width, i =>
+            for (int i = 0; i < width; i++)
             {
                 float cameraX = 2 * i / (float)width - 1;
                 Vector2 rayDir = new Vector2(
@@ -62,8 +61,18 @@ namespace Raycaster
                     sideDistY = (mapY + 1.0 - position.Y) * deltaDistY;
                 }
 
+                bool startedInsideWall = true;
+
                 while (!hit)
                 {
+                    if ((int)position.X < 0 || (int)position.X >= map.GetLength(0) || (int)position.Y < 0 || (int)position.Y >= map.GetLength(1))
+                        break;
+                    // Check if the initial position is inside a wall
+                    if (startedInsideWall && (map[mapX, mapY] == 0 || map[mapX, mapY] == 67))
+                    {
+                        startedInsideWall = false;
+                    }
+                    
                     if (sideDistX < sideDistY)
                     {
                         sideDistX += deltaDistX;
@@ -80,10 +89,15 @@ namespace Raycaster
                     if (mapX < 0 || mapX >= map.GetLength(0) || mapY < 0 || mapY >= map.GetLength(1))
                         break;
 
-                    if (map[mapX, mapY] > 0)
+                    if (map[mapX, mapY] > 0 && map[mapX, mapY] != 67 && !startedInsideWall)
+                    {
                         hit = true;
+
+                        if (!renderAllWalls)
+                            break; // Break if renderAllWalls is not set
+                    }
                 }
-                
+
 
                 if (!hit)
                     return;
@@ -97,8 +111,8 @@ namespace Raycaster
 
                 int projectedHeight = (int)((height) / perpWallDist);
 
-                int drawStart = Math.Max(0, (height - projectedHeight) / 2);
-                int drawEnd = Math.Min(height - 1, (height + projectedHeight) / 2);
+                int drawStart = Math.Max(0, (height - projectedHeight) / 2)-(int)(level.heightOffset* height / perpWallDist);
+                int drawEnd = Math.Min(height - 1, (height + projectedHeight) / 2) - (int)(level.heightOffset * height / perpWallDist);
 
                 int offset = height - projectedHeight;
 
@@ -178,6 +192,8 @@ namespace Raycaster
 
                 for (int y = drawEnd + 1; y < height; y++)
                 {
+                    if (y < 0 || y >= height || i < 0 || i >= width)
+                        continue;
                     camera.RenderedBuffer[i, y] = true;
                     // Calculate the ray direction for the floor
                     Vector2 floorRayDir = new Vector2(
@@ -185,10 +201,14 @@ namespace Raycaster
                         playerDir.Y + camera.Right.Y * (2 * i / (float)width - 1));
 
                     // Calculate the current distance to the floor
-                    double currentDist = height / (2.0 * y - height);
+                     double currentDist = height / (2.0 * y - height);
 
                     // Calculate the position of the floor intersection
                     Vector2 floorIntersection = position + (float)currentDist * floorRayDir;
+                    if ((int)floorIntersection.Y < 0 || (int)floorIntersection.Y >= map.GetLength(1) || (int)floorIntersection.X < 0 || (int)floorIntersection.X >= map.GetLength(0))
+                        continue;
+                    if (map[(int)floorIntersection.X, (int)floorIntersection.Y] != 0)
+                        continue;
 
                     // Get the texture coordinates for the floor
                     int floorTexX = (int)(floorIntersection.X * textureSheet.Width) % textureSheet.Width;
@@ -202,14 +222,14 @@ namespace Raycaster
 
                     int[,] patern = PixelPattern(brightness);
 
-                    int y1 = y + (int)((i - camera.Width / 2) * camera.RollAngle * 0.02f);
+                    int y1 = y + (int)((i - camera.Width/2) * camera.RollAngle * 0.02f);
                     if (y1 >= 0 && y1 < camera.Height - 1)
                     {
                         camera.RenderedBuffer[i, y1] = true;
                     }
                     RenderPixelPattern(screenRes, camera, i, y1, patern, brightness);
                 }
-            });
+            };
         }
 
         public static Point ActualUsedRegion(Camera camera, Point screenRes)
@@ -370,10 +390,10 @@ namespace Raycaster
             return new Rectangle(sourceX, sourceY, tileWidth, tileHeight);
         }
 
+        
+
         public static void DrawEntity(Point screenRes, Camera camera, Entity entity, bool outlined = false)
         {
-            Color transparent = new Color(155, 0, 139);
-
             float angleDifference = MathF.Atan2(entity.Position.Y - camera.Position.Y, entity.Position.X - camera.Position.X) - camera.Angle;
             if (angleDifference < -MathF.PI)
             {
@@ -484,7 +504,7 @@ namespace Raycaster
 
         public static void DrawEntityOutlines(Point screenRes, Camera camera)
         {
-            Parallel.For(1, camera.Width - 1, i =>
+            for (int i = 1; i < camera.Width - 1; i++)
             {
                 for (int j = 1; j < camera.Height - 1; j++)
                 {
@@ -504,12 +524,12 @@ namespace Raycaster
                         }
                     }
                 }
-            });
+            };
         }
 
         public static void DrawGunOutlines(Point screenRes, Camera camera)
         {
-            Parallel.For(1, camera.Width - 1, i =>
+            for (int i = 1; i < camera.Width - 1; i++)
             {
                 for (int j = 1; j < camera.Height - 1; j++)
                 {
@@ -530,7 +550,7 @@ namespace Raycaster
                     }
                 }
 
-            });
+            };
         
 
             for (int i = 1; i < camera.Width - 1; i++)

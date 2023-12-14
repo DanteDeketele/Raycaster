@@ -21,9 +21,14 @@ namespace LevelEditor
             InitializeComponent();
         }
 
-        private void btnOK_Click(object sender, EventArgs e)
+        private void button1_Click(object sender, EventArgs e)
         {
-            if (int.TryParse(txtWidth.Text, out int width) && int.TryParse(txtHeight.Text, out int height))
+            DialogResult = DialogResult.Cancel;
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            if (int.TryParse(txtWidth.Text, out int width) && int.TryParse(txtHeight.Text, out int height) && !string.IsNullOrEmpty(txtTitle.Text))
             {
                 WidthValue = width;
                 HeightValue = height;
@@ -33,18 +38,8 @@ namespace LevelEditor
             }
             else
             {
-                MessageBox.Show("Please enter valid numeric values for width and height.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Please enter valid values for width and height and title.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-        }
-
-        private void btnCancel_Click(object sender, EventArgs e)
-        {
-            DialogResult = DialogResult.Cancel;
-        }
-
-        private void CreateLevelForm_Load(object sender, EventArgs e)
-        {
-
         }
     }
 }
