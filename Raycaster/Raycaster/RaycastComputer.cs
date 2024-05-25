@@ -4,6 +4,7 @@ using Microsoft.Xna.Framework.Graphics;
 using NAudio.MediaFoundation;
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace Raycaster
 {
@@ -21,7 +22,7 @@ namespace Raycaster
             Vector2 playerDir = camera.Forward;
 
             // Use Parallel.For to parallelize the outer loop
-            for (int i = 0; i < width; i++)
+            Parallel.For(0, width, i =>
             {
                 float cameraX = 2 * i / (float)width - 1;
                 Vector2 rayDir = new Vector2(

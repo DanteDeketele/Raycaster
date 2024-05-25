@@ -93,8 +93,8 @@ namespace Raycaster
 
             _screenRes = new Point(_graphics.PreferredBackBufferWidth, _graphics.PreferredBackBufferHeight);
 
-            this.IsFixedTimeStep = true;
-            this.TargetElapsedTime = TimeSpan.FromSeconds(1d / 30d); //60);
+            this.IsFixedTimeStep = false;
+            //this.TargetElapsedTime = TimeSpan.FromSeconds(1d / 30d); //60);
 
             // Set the game to run in fullscreen mode
             //_graphics.IsFullScreen = true;
