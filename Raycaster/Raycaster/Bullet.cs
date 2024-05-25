@@ -26,15 +26,18 @@ namespace Raycaster
             if (!(_level.MapData[(int)Position.X, (int)Position.Y] == 0 || _level.MapData[(int)Position.X, (int)Position.Y] == 67))
             {
                 
-                Destroy();CreateBulletHole();
+                Destroy();//CreateBulletHole();
             }
 
             foreach (Enemy enemy in _enemies)
             {
-                if (enemy.IsOverlapping(this) && !enemy.Dead)
+                if (_level.entities.Contains(enemy))
                 {
-                    Destroy();
-                    enemy.damage(Damage);
+                    if (enemy.IsOverlapping(this) && !enemy.Dead)
+                    {
+                        Destroy();
+                        enemy.damage(Damage);
+                    }
                 }
             }
         }

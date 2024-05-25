@@ -111,8 +111,9 @@ namespace Raycaster
 
                 int projectedHeight = (int)((height) / perpWallDist);
 
-                int drawStart = Math.Max(0, (height - projectedHeight) / 2)-(int)(level.heightOffset* height / perpWallDist);
+                int drawStart = Math.Max(0, (height - projectedHeight) / 2) - (int)(level.heightOffset * height / perpWallDist);
                 int drawEnd = Math.Min(height - 1, (height + projectedHeight) / 2) - (int)(level.heightOffset * height / perpWallDist);
+
 
                 int offset = height - projectedHeight;
 
@@ -392,7 +393,7 @@ namespace Raycaster
 
         
 
-        public static void DrawEntity(Point screenRes, Camera camera, Entity entity, bool outlined = false)
+        public static void DrawEntity(Point screenRes, Camera camera, Entity entity, Level level, bool outlined = false)
         {
             float angleDifference = MathF.Atan2(entity.Position.Y - camera.Position.Y, entity.Position.X - camera.Position.X) - camera.Angle;
             if (angleDifference < -MathF.PI)
@@ -460,7 +461,7 @@ namespace Raycaster
                 for (int j = 0; j < width; j++)
                 {
                     
-                    int yPos = j + camera.Height/2 - width / 2;
+                    int yPos = j + camera.Height/2 - width / 2;// + (int)(level.heightOffset*width/distance);
                     if (entity.IsBullet)
                     {
                         yPos += (int)(40/distance);
@@ -491,12 +492,12 @@ namespace Raycaster
                     brightness -= br;
 
                     int[,] patern = PixelPattern(brightness);
-                    RenderPixelPattern(screenRes, camera, xPos, yPos + (int)((xPos - camera.Width / 2) * camera.RollAngle * 0.02f), patern, brightness);
+                    RenderPixelPattern(screenRes, camera, xPos, yPos  + (int)((xPos - camera.Width / 2) * camera.RollAngle * 0.02f) + (int)(width*-level.heightOffset), patern, brightness);
                     //camera.RenderedBuffer[xPos, yPos + (int)((xPos - camera.Width / 2) * camera.RollAngle * 0.02f)] = true;
 
-                    if (outlined && !entity.IsBullet && (yPos + (int)((xPos - camera.Width / 2) * camera.RollAngle * 0.02f)) > 0 && (yPos + (int)((xPos - camera.Width / 2) * camera.RollAngle * 0.02f)) < camera.Height-1)
+                    if (outlined && !entity.IsBullet && (yPos + (int)((xPos - camera.Width / 2) * camera.RollAngle * 0.02f) + (int)(width * -level.heightOffset)) > 0 && (yPos + (int)((xPos - camera.Width / 2) * camera.RollAngle * 0.02f) + (int)(width * -level.heightOffset)) < camera.Height-1)
                     {
-                        camera.EntityBuffer[xPos, yPos + (int)((xPos - camera.Width / 2) * camera.RollAngle * 0.02f)] = distance;
+                        camera.EntityBuffer[xPos, yPos + (int)((xPos - camera.Width / 2) * camera.RollAngle * 0.02f) + (int)(width * -level.heightOffset)] = distance;
                     }
                 }
             }
@@ -1024,6 +1025,42 @@ namespace Raycaster
                         { 0,1,1,0,0,1,1,0},
                         { 0,1,1,0,0,1,1,0},
                         { 0,1,1,0,0,1,1,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+                case 'D':
+                    return new int[,]
+                    {
+                        { 0,1,1,1,1,1,0,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,1,1,1,0,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+                case 'G':
+                    return new int[,]
+                    {
+                        { 0,0,1,1,1,1,0,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,0,0,0,0},
+                        { 0,1,1,0,0,0,0,0},
+                        { 0,1,1,0,1,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,0,1,1,1,1,0,0},
+                        { 0,0,0,0,0,0,0,0}
+                    };
+                case 'N':
+                    return new int[,]
+                    {
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,1,0,1,1,0},
+                        { 0,1,1,1,1,1,1,0},
+                        { 0,1,1,0,1,1,1,0},
+                        { 0,1,1,0,0,1,1,0},
+                        { 0,1,1,0,0,1,0,0},
                         { 0,0,0,0,0,0,0,0}
                     };
                 case 'P':

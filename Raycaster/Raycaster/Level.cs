@@ -58,7 +58,7 @@ namespace Raycaster
                     //RaycastComputer.DrawBulletHole(screenRes, camera, (BulletHole)entity);
                     continue;
                 }
-                RaycastComputer.DrawEntity(screenRes,camera, entity, entity.DistanceToCamera < 4);
+                RaycastComputer.DrawEntity(screenRes,camera, entity, this, entity.DistanceToCamera < 4);
             }
         }
     }

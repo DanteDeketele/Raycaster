@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks.Dataflow;
+using System.Reflection.Emit;
 
 namespace Raycaster
 {
@@ -51,7 +52,7 @@ namespace Raycaster
 
         private Point _screenRes;
 
-        private int _gunIndex = 0;
+        private int _gunIndex = 1;
         private float _prevWheelValue = 0;
         private bool _shootAnimation = false;
         private float _shootTime = 0;
@@ -153,21 +154,35 @@ namespace Raycaster
             //_soundEffects["music"].Play(0.1f, 0, 0);
             _movieSoundEffects = AudioUnpacker.GetSounds("Assets/Movies");
 
-            Enemy enemy1 = new Enemy(_enemieTexture, new Vector2(1.5f, 7.5f), _soundEffects);
+            Enemy enemy1 = new Enemy(_enemieTexture, new Vector2(2.5f, 8.5f), _soundEffects);
             enemy1.State = 6;
             enemy1.IsStaticSprite = true;
             enemy1.StaticSprite = 47;
-            _levels[_currentLevelId].entities.Add(enemy1);
+            _levels[0].entities.Add(enemy1);
             _enemies.Add(enemy1);
 
-            Enemy enemy2 = new Enemy(_enemieTexture, new Vector2(8.5f, 6.5f), _soundEffects, MathF.PI);
-            enemy2.waypoints = new Vector2[] { new Vector2(8.5f, 1.5f), new Vector2(8.5f, 6.5f) };
-            _levels[_currentLevelId].entities.Add(enemy2);
+            Enemy enemy2 = new Enemy(_enemieTexture, new Vector2(9.5f, 7.5f), _soundEffects, MathF.PI);
+            enemy2.waypoints = new Vector2[] { new Vector2(9.5f, 2.5f), new Vector2(9.5f, 7.5f) };
+            _levels[0].entities.Add(enemy2);
             _enemies.Add(enemy2);
 
-            _levels[0].heightOffset = -1f;
-            _levels[1].heightOffset = -0f;
-            _currentLevelId = 1;
+            Enemy enemy3 = new Enemy(_enemieTexture, new Vector2(7.5f, 7.5f), _soundEffects, MathF.PI);
+            enemy3.State = 6;
+            enemy3.IsStaticSprite = true;
+            enemy3.StaticSprite = 47;
+            _levels[1].entities.Add(enemy3);
+            _enemies.Add(enemy3);
+
+            Enemy enemy4 = new Enemy(_enemieTexture, new Vector2(1.5f, 6.5f), _soundEffects, 0);
+            enemy4.State = 6;
+            enemy4.IsStaticSprite = true;
+            enemy4.StaticSprite = 47;
+            _levels[1].entities.Add(enemy4);
+            _enemies.Add(enemy4);
+
+            _levels[0].heightOffset = 0f;
+            _levels[1].heightOffset = 1f;
+            _currentLevelId = 0;
 
             _loadMovieQue = true;
             _loadMovieQueName = "intro";
@@ -199,7 +214,7 @@ namespace Raycaster
                 _paused = false;
                 _camera.RenderLoaded = 0;
             }
-                
+
 
             if (_loadMovieQue && _drawnLoadingScreen && _waitedAFrameLoadingScreen > 2)
             {
@@ -221,9 +236,9 @@ namespace Raycaster
 
             _inputHandeler.Update();
 
-            
 
-            
+
+
 
             if (!_paused)
             {
@@ -252,12 +267,12 @@ namespace Raycaster
                 _prevWheelValue = Mouse.GetState().ScrollWheelValue;
 
 
-                if (Mouse.GetState().LeftButton == ButtonState.Pressed && _gunIndex!=0)
+                if (Mouse.GetState().LeftButton == ButtonState.Pressed && _gunIndex != 0)
                 {
                     if (!_shootAnimation)
                     {
                         _shootAnimation = true;
-                        Bullet bullet = new Bullet(new Image(1,1,new ushort[,] { { 4 } }),_camera.Position + _camera.Forward * 0.01f, _enemies.ToArray(), _levels[_currentLevelId], 1);
+                        Bullet bullet = new Bullet(new Image(1, 1, new ushort[,] { { 4 } }), _camera.Position + _camera.Forward * 0.01f, _enemies.ToArray(), _levels[_currentLevelId], 1);
                         bullet.waypoints = new Vector2[] { _camera.Forward * 10 + _camera.Position };
                         bullet.Speed = 20;
                         bullet.Size = 0.1f;
@@ -301,7 +316,7 @@ namespace Raycaster
                     _levels[1].heightOffset = 1f + _ladderProgress;
                 }
 
-                if (_currentLevelId == 0 && map[(int)(_camera.Position.X + _camera.Forward.X/2f), (int)(_camera.Position.Y + _camera.Forward.Y / 2f)] == 2)
+                if (_currentLevelId == 0 && map[(int)(_camera.Position.X + _camera.Forward.X / 2f), (int)(_camera.Position.Y + _camera.Forward.Y / 2f)] == 2)
                 {
                     if (InputHandeler.MoveDirection.Y > 0)
                     {
@@ -315,7 +330,7 @@ namespace Raycaster
                             _currentLevelId = 1;
                             _levels[0].heightOffset = -1f;
                             _levels[1].heightOffset = 0f;
-                            _camera.Position += _camera.Forward * _camera.Radius *2;
+                            _camera.Position += _camera.Forward * _camera.Radius * 2;
                         }
                     }
                     if (InputHandeler.MoveDirection.Y < 0)
@@ -374,8 +389,9 @@ namespace Raycaster
                     {
                         _loadMovieQue = true;
                         _loadMovieQueName = "prologue";
-                        _camera.Position = new Vector2(1.5f, 1.5f);
-                        _currentLevelId++;
+                        _camera.Position = new Vector2(2.5f, 2.5f);
+                       
+                        _currentLevelId = 0;
                     }
                 }
                 catch (Exception ex)
@@ -417,13 +433,14 @@ namespace Raycaster
                     }
                 }
 
+
                 foreach (var entity in _levels[_currentLevelId].entities)
                 {
                     entity.Update(deltaTime, _camera);
 
                     if (entity is Bullet)
                     {
-                        if (_levels[_currentLevelId].MapData[(int)entity.Position.X, (int)entity.Position.Y] != 0)
+                        if (!(_levels[_currentLevelId].MapData[(int)entity.Position.X, (int)entity.Position.Y] == 0 || _levels[_currentLevelId].MapData[(int)entity.Position.X, (int)entity.Position.Y] == 67))
                         {
                             entity.Active = false;
                             _soundEffects["shot"].Play(0.05f, 1f, 0);
@@ -435,7 +452,6 @@ namespace Raycaster
                         _levels[_currentLevelId].entitiesToRemove.Add(entity);
                     }
                 }
-
                 foreach (var entity in _levels[_currentLevelId].entitiesToRemove)
                 {
                     _levels[_currentLevelId].entities.Remove(entity);
@@ -449,11 +465,14 @@ namespace Raycaster
                 {
                     _levels[_currentLevelId].entities.Add(entity);
                 }
-
-                _levels[_currentLevelId].entitiesToRemove.Clear();
-                _levels[_currentLevelId].entitiesToAdd.Clear();
             }
-            
+
+
+
+            _levels[_currentLevelId].entitiesToRemove.Clear();
+            _levels[_currentLevelId].entitiesToAdd.Clear();
+
+
 
 
 
@@ -471,7 +490,7 @@ namespace Raycaster
             _movieTexture = Image.TextureToImage(Texture2D.FromStream(GraphicsDevice, fileStream4));
             fileStream4.Dispose();
             _introMovie = new Movie($"Assets/Movies/{movieName}.png", _graphics.GraphicsDevice, 100, _movieTexture);
-            _movieSoundEffects[movieName].Play(0.1f, 0, 0);
+            _movieSoundEffects[movieName].Play(1f, 0, 0);
             
         }
 
@@ -510,12 +529,16 @@ namespace Raycaster
                 if (_currentLevelId == 1)
                 {
                     DrawLevel(_levels[0], deltaTime);
+                    DrawEntities(_levels[0]);
                     DrawLevel(_levels[1], deltaTime);
+                    DrawEntities(_levels[1]);
                 }
                 if (_currentLevelId == 0)
                 {
                     DrawLevel(_levels[1], deltaTime);
+                    DrawEntities(_levels[1]);
                     DrawLevel(_levels[0], deltaTime);
+                    DrawEntities(_levels[0]);
                 }
 
 
@@ -576,7 +599,11 @@ namespace Raycaster
         {
 
             RaycastComputer.DrawScreen(_screenRes, _camera, level, _textureSheet, _glowTexture, _blinkFase, renderAll);
+            
+        }
 
+        private void DrawEntities(Level level)
+        {
             level.DrawEntities(_screenRes, _camera);
         }
     }
